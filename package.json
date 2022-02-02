@@ -1,6 +1,6 @@
 {
   "name": "download-executable",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Download an executable, but only if needed",
   "scripts": {
     "build": "rm -rf build/ && npm run -- tsc --project ./tsconfig.dist.json --noEmitOnError --outDir ./build && cp package.json package-lock.json README.md ./build/ && (cd ./build && npm ci --only=production)",

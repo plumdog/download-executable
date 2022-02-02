@@ -118,4 +118,53 @@ describe('downloads using version shortcut', () => {
 
         fs.rmdirSync(dir.name, { recursive: true });
     });
+
+    test('does not download file if already the right version', async () => {
+        const dir = tmp.dirSync();
+
+        const target = pathlib.join(dir.name, 'testexc');
+        fs.writeFileSync(target, sampleExecutableFileContent);
+        fs.chmodSync(target, 0o755);
+
+        await downloadExecutable({
+            target: pathlib.join(dir.name, 'testexc'),
+            options: Options.version({
+                version: '1.2.3',
+                url: 'http://example.com/testexc_version_{version}',
+                versionExecArgs: [],
+            }),
+        });
+
+        expect(mockAxios.history.get).toEqual([]);
+
+        expect(fs.readFileSync(pathlib.join(dir.name, 'testexc'), 'utf8')).toEqual(sampleExecutableFileContent);
+
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
+    test('does not download file if already the right version, handle post-process', async () => {
+        const dir = tmp.dirSync();
+
+        const content = ['#!/bin/bash', '', 'echo prefix 1.2.3 suffix', ''].join('\n');
+
+        const target = pathlib.join(dir.name, 'testexc');
+        fs.writeFileSync(target, content);
+        fs.chmodSync(target, 0o755);
+
+        await downloadExecutable({
+            target: pathlib.join(dir.name, 'testexc'),
+            options: Options.version({
+                version: '1.2.3',
+                url: 'http://example.com/testexc_version_{version}',
+                versionExecArgs: [],
+                versionExecPostProcess: (output: string): string => {
+                    return output.replace(/^prefix\ /, '').replace(/\ suffix$/, '');
+                },
+            }),
+        });
+
+        expect(mockAxios.history.get).toEqual([]);
+
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
 });

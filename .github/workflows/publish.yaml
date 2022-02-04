@@ -16,7 +16,7 @@ jobs:
           node-version: 12
       - run: npm ci
       - run: npm run build
-      - run: echo '//registry.npmjs.org/:_authToken=${NPM_TOKEN}' >> ./build/.npmrc
+      - run: echo 'registry=//registry.npmjs.org/:_authToken=${NPM_TOKEN}' >> ./build/.npmrc
       - run: cat ./build/.npmrc
       - run: cd ./build && npm publish
         env:

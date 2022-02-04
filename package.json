@@ -1,6 +1,6 @@
 {
   "name": "fetch-executable",
-  "version": "0.1.7",
+  "version": "0.2.0",
   "description": "Fetch an executable, but only if needed",
   "scripts": {
     "build": "rm -rf build/ && npm run -- tsc --project ./tsconfig.dist.json --noEmitOnError --outDir ./build && cp package.json package-lock.json README.md ./build/ && (cd ./build && npm ci --only=production)",

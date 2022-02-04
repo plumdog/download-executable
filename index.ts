@@ -58,7 +58,12 @@ export class Options {
         return new Options({
             url: format(props.url, { version: props.version }),
             execIsOk: async (filepath: string): Promise<boolean> => {
-                const out = execSync([filepath, ...props.versionExecArgs].join(' '), { encoding: 'utf8' }).trim();
+                let out: string;
+                try {
+                    out = execSync([filepath, ...props.versionExecArgs].join(' '), { encoding: 'utf8' }).trim();
+                } catch (err) {
+                    return false;
+                }
                 const processed = props.versionExecPostProcess ? props.versionExecPostProcess(out) : out;
                 return processed === props.version;
             },

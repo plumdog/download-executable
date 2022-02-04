@@ -142,6 +142,33 @@ describe('fetchs using version shortcut', () => {
         fs.rmdirSync(dir.name, { recursive: true });
     });
 
+    test('does fetch file if unable to run local executable', async () => {
+        const dir = tmp.dirSync();
+
+        mockAxios.onGet().reply(200, createBody(sampleExecutableFileContent));
+
+        const target = pathlib.join(dir.name, 'testexc');
+        fs.writeFileSync(target, sampleExecutableFileContent);
+        // No execute
+        fs.chmodSync(target, 0o644);
+
+        await fetchExecutable({
+            target: pathlib.join(dir.name, 'testexc'),
+            options: Options.version({
+                version: '1.2.3',
+                url: 'http://example.com/testexc_version_{version}',
+                versionExecArgs: [],
+            }),
+        });
+
+        expect(fs.readFileSync(pathlib.join(dir.name, 'testexc'), 'utf8')).toEqual(sampleExecutableFileContent);
+        expect(execSync(pathlib.join(dir.name, 'testexc'), { encoding: 'utf8' }).trim()).toEqual('1.2.3');
+
+        expect(mockAxios.history.get[0].url).toEqual('http://example.com/testexc_version_1.2.3');
+
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
     test('does not fetch file if already the right version, handle post-process', async () => {
         const dir = tmp.dirSync();
 

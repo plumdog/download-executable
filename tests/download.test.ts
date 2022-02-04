@@ -1,4 +1,4 @@
-import { downloadExecutable, Options } from '..';
+import { fetchExecutable, Options } from '..';
 import * as tmp from 'tmp';
 import * as pathlib from 'path';
 import * as fs from 'fs';
@@ -30,8 +30,8 @@ const createBody = (body: string): NodeJS.ReadableStream => {
 
 const sampleExecutableFileContent = ['#!/bin/bash', '', 'echo 1.2.3', ''].join('\n');
 
-describe('downloads', () => {
-    test('can download file', async () => {
+describe('fetchs', () => {
+    test('can fetch file', async () => {
         const dir = tmp.dirSync();
 
         mockAxios.onGet().reply(200, createBody(sampleExecutableFileContent));
@@ -42,7 +42,7 @@ describe('downloads', () => {
             execIsOk: async (filepath: string): Promise<boolean> => false,
         });
 
-        await downloadExecutable({
+        await fetchExecutable({
             target: pathlib.join(dir.name, 'testexc'),
             options,
         });
@@ -53,12 +53,12 @@ describe('downloads', () => {
         fs.rmdirSync(dir.name, { recursive: true });
     });
 
-    test('does not download file if already the right version', async () => {
+    test('does not fetch file if already the right version', async () => {
         const dir = tmp.dirSync();
 
         fs.writeFileSync(pathlib.join(dir.name, 'testexc'), 'anyfile');
 
-        await downloadExecutable({
+        await fetchExecutable({
             target: pathlib.join(dir.name, 'testexc'),
             options: new Options({
                 url: 'http://example.com/testexc_version_1.2.3',
@@ -74,14 +74,14 @@ describe('downloads', () => {
         fs.rmdirSync(dir.name, { recursive: true });
     });
 
-    test('does download file if the wrong version', async () => {
+    test('does fetch file if the wrong version', async () => {
         const dir = tmp.dirSync();
 
         fs.writeFileSync(pathlib.join(dir.name, 'testexc'), 'oldfile');
 
         mockAxios.onGet().reply(200, createBody('newfile'));
 
-        await downloadExecutable({
+        await fetchExecutable({
             target: pathlib.join(dir.name, 'testexc'),
             options: new Options({
                 url: 'http://example.com/testexc_version_1.2.3',
@@ -96,13 +96,13 @@ describe('downloads', () => {
     });
 });
 
-describe('downloads using version shortcut', () => {
-    test('can download file by version shortcut', async () => {
+describe('fetchs using version shortcut', () => {
+    test('can fetch file by version shortcut', async () => {
         const dir = tmp.dirSync();
 
         mockAxios.onGet().reply(200, createBody(sampleExecutableFileContent));
 
-        await downloadExecutable({
+        await fetchExecutable({
             target: pathlib.join(dir.name, 'testexc'),
             options: Options.version({
                 version: '1.2.3',
@@ -119,14 +119,14 @@ describe('downloads using version shortcut', () => {
         fs.rmdirSync(dir.name, { recursive: true });
     });
 
-    test('does not download file if already the right version', async () => {
+    test('does not fetch file if already the right version', async () => {
         const dir = tmp.dirSync();
 
         const target = pathlib.join(dir.name, 'testexc');
         fs.writeFileSync(target, sampleExecutableFileContent);
         fs.chmodSync(target, 0o755);
 
-        await downloadExecutable({
+        await fetchExecutable({
             target: pathlib.join(dir.name, 'testexc'),
             options: Options.version({
                 version: '1.2.3',
@@ -142,7 +142,7 @@ describe('downloads using version shortcut', () => {
         fs.rmdirSync(dir.name, { recursive: true });
     });
 
-    test('does not download file if already the right version, handle post-process', async () => {
+    test('does not fetch file if already the right version, handle post-process', async () => {
         const dir = tmp.dirSync();
 
         const content = ['#!/bin/bash', '', 'echo prefix 1.2.3 suffix', ''].join('\n');
@@ -151,7 +151,7 @@ describe('downloads using version shortcut', () => {
         fs.writeFileSync(target, content);
         fs.chmodSync(target, 0o755);
 
-        await downloadExecutable({
+        await fetchExecutable({
             target: pathlib.join(dir.name, 'testexc'),
             options: Options.version({
                 version: '1.2.3',

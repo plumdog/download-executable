@@ -1,2 +1,2 @@
-# download-executable
-Download an executable, but only if needed
+# fetch-executable
+Fetch an executable, but only if needed

@@ -5,19 +5,21 @@ on:
     # Sequence of patterns matched against refs/tags
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
+    branches:
+      - 'fix-publish'
 
 jobs:
   publish-npm:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v2
         with:
-          node-version: 12
+          node-version: 14
+          registry-url: https://registry.npmjs.org/
       - run: npm ci
       - run: npm run build
-      - run: echo 'registry=https://registry.npmjs.org/:_authToken=${NPM_TOKEN}' >> ./build/.npmrc
-      - run: cat ./build/.npmrc
+      # See https://github.com/actions/setup-node/blob/main/docs/advanced-usage.md#publish-to-npmjs-and-gpr-with-npm
       - run: cd ./build && npm publish
         env:
-          NPM_TOKEN: ${{secrets.npm_token}}
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}

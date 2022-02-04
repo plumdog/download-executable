@@ -19,7 +19,6 @@ jobs:
           registry-url: https://registry.npmjs.org/
       - run: npm ci
       - run: npm run build
-      - run: rm -f ./.npmrc
       # See https://github.com/actions/setup-node/blob/main/docs/advanced-usage.md#publish-to-npmjs-and-gpr-with-npm
       - run: cd ./build && npm publish
         env:

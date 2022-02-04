@@ -1,7 +1,7 @@
 {
-  "name": "download-executable",
+  "name": "fetch-executable",
   "version": "0.1.6",
-  "description": "Download an executable, but only if needed",
+  "description": "Fetch an executable, but only if needed",
   "scripts": {
     "build": "rm -rf build/ && npm run -- tsc --project ./tsconfig.dist.json --noEmitOnError --outDir ./build && cp package.json package-lock.json README.md ./build/ && (cd ./build && npm ci --only=production)",
     "compile": "npm run tsc --noEmitOnError",

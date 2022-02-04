@@ -66,12 +66,12 @@ export class Options {
     }
 }
 
-export interface DownloadExecutableProps {
+export interface FetchExecutableProps {
     target: string;
     options: Options;
 }
 
-export const downloadExecutable = async (props: DownloadExecutableProps): Promise<void> => {
+export const fetchExecutable = async (props: FetchExecutableProps): Promise<void> => {
     if (fs.existsSync(props.target)) {
         const isOk: boolean = await props.options.execIsOk(props.target);
         if (isOk) {

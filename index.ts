@@ -81,7 +81,9 @@ export const fetchExecutable = async (props: FetchExecutableProps): Promise<void
 
     const url = props.options.url;
 
-    const response = await axios.get(url);
+    const response = await axios.get(url, {
+        responseType: 'stream',
+    });
 
     await readFromStream(response.data, props.target);
     fs.chmodSync(props.target, 0o755);

@@ -56,7 +56,7 @@ export class Options {
 
     static version(props: OptionsByVersionProps): Options {
         return new Options({
-            url: format(props.url, { version: props.version }),
+            url: format(props.url, { version: props.version, platform: process.platform }),
             execIsOk: async (filepath: string): Promise<boolean> => {
                 let out: string;
                 try {

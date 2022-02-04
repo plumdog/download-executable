@@ -1,9 +1,9 @@
-import { fetchExecutable, Options } from '.';
+import { fetchExecutable } from '.';
 
 export const kubectl = async (targetPath: string, version: string): Promise<void> => {
     await fetchExecutable({
         target: targetPath,
-        options: Options.version({
+        options: {
             url: 'https://dl.k8s.io/release/v{version}/bin/{platform}/amd64/kubectl',
             version,
             versionExecArgs: ['version', '--client=true', '--short'],
@@ -14,14 +14,14 @@ export const kubectl = async (targetPath: string, version: string): Promise<void
                 }
                 return execOutput.substring(prefix.length).trim();
             },
-        }),
+        },
     });
 };
 
 export const sops = async (targetPath: string, version: string): Promise<void> => {
     await fetchExecutable({
         target: targetPath,
-        options: Options.version({
+        options: {
             url: 'https://github.com/mozilla/sops/releases/download/v{version}/sops-v{version}.{platform}',
             version,
             versionExecArgs: ['--version'],
@@ -33,14 +33,14 @@ export const sops = async (targetPath: string, version: string): Promise<void> =
                 }
                 return firstLine.substring(prefix.length).trim().replace(/ .*/, '');
             },
-        }),
+        },
     });
 };
 
 export const helmfile = async (targetPath: string, version: string): Promise<void> => {
     await fetchExecutable({
         target: targetPath,
-        options: Options.version({
+        options: {
             url: 'https://github.com/roboll/helmfile/releases/download/v{version}/helmfile_{platform}_amd64',
             version,
             versionExecArgs: ['--version'],
@@ -51,6 +51,6 @@ export const helmfile = async (targetPath: string, version: string): Promise<voi
                 }
                 return execOutput.substring(prefix.length).trim();
             },
-        }),
+        },
     });
 };

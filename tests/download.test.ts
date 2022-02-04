@@ -1,4 +1,4 @@
-import { fetchExecutable, Options } from '..';
+import { fetchExecutable } from '..';
 import * as tmp from 'tmp';
 import * as pathlib from 'path';
 import * as fs from 'fs';
@@ -36,11 +36,11 @@ describe('fetchs', () => {
 
         mockAxios.onGet().reply(200, createBody(sampleExecutableFileContent));
 
-        const options = new Options({
+        const options = {
             url: 'http://example.com/testexc_version_1.2.3',
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             execIsOk: async (filepath: string): Promise<boolean> => false,
-        });
+        };
 
         await fetchExecutable({
             target: pathlib.join(dir.name, 'testexc'),
@@ -60,11 +60,11 @@ describe('fetchs', () => {
 
         await fetchExecutable({
             target: pathlib.join(dir.name, 'testexc'),
-            options: new Options({
+            options: {
                 url: 'http://example.com/testexc_version_1.2.3',
                 // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 execIsOk: async (filepath: string): Promise<boolean> => true,
-            }),
+            },
         });
 
         expect(mockAxios.history.get).toEqual([]);
@@ -83,11 +83,11 @@ describe('fetchs', () => {
 
         await fetchExecutable({
             target: pathlib.join(dir.name, 'testexc'),
-            options: new Options({
+            options: {
                 url: 'http://example.com/testexc_version_1.2.3',
                 // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 execIsOk: async (filepath: string): Promise<boolean> => Promise.resolve(false),
-            }),
+            },
         });
 
         expect(fs.readFileSync(pathlib.join(dir.name, 'testexc'), 'utf8')).toEqual('newfile');
@@ -104,11 +104,10 @@ describe('fetchs using version shortcut', () => {
 
         await fetchExecutable({
             target: pathlib.join(dir.name, 'testexc'),
-            options: Options.version({
+            options: {
                 version: '1.2.3',
                 url: 'http://example.com/testexc_version_{version}',
-                versionExecArgs: [],
-            }),
+            },
         });
 
         expect(fs.readFileSync(pathlib.join(dir.name, 'testexc'), 'utf8')).toEqual(sampleExecutableFileContent);
@@ -128,11 +127,10 @@ describe('fetchs using version shortcut', () => {
 
         await fetchExecutable({
             target: pathlib.join(dir.name, 'testexc'),
-            options: Options.version({
+            options: {
                 version: '1.2.3',
                 url: 'http://example.com/testexc_version_{version}',
-                versionExecArgs: [],
-            }),
+            },
         });
 
         expect(mockAxios.history.get).toEqual([]);
@@ -154,11 +152,10 @@ describe('fetchs using version shortcut', () => {
 
         await fetchExecutable({
             target: pathlib.join(dir.name, 'testexc'),
-            options: Options.version({
+            options: {
                 version: '1.2.3',
                 url: 'http://example.com/testexc_version_{version}',
-                versionExecArgs: [],
-            }),
+            },
         });
 
         expect(fs.readFileSync(pathlib.join(dir.name, 'testexc'), 'utf8')).toEqual(sampleExecutableFileContent);
@@ -180,14 +177,13 @@ describe('fetchs using version shortcut', () => {
 
         await fetchExecutable({
             target: pathlib.join(dir.name, 'testexc'),
-            options: Options.version({
+            options: {
                 version: '1.2.3',
                 url: 'http://example.com/testexc_version_{version}',
-                versionExecArgs: [],
                 versionExecPostProcess: (output: string): string => {
                     return output.replace(/^prefix\ /, '').replace(/\ suffix$/, '');
                 },
-            }),
+            },
         });
 
         expect(mockAxios.history.get).toEqual([]);

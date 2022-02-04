@@ -1,4 +1,4 @@
-import { fetchExecutable, Options } from '..';
+import { fetchExecutable } from '..';
 import * as tmp from 'tmp';
 import * as pathlib from 'path';
 import * as fs from 'fs';
@@ -16,11 +16,11 @@ describe('httpbin', () => {
     test('get from httpbin', async () => {
         const dir = tmp.dirSync();
 
-        const options = new Options({
+        const options = {
             url: `https://httpbin.org/base64/${base64encode(sampleExecutableFileContent)}`,
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             execIsOk: async (filepath: string): Promise<boolean> => false,
-        });
+        };
 
         await fetchExecutable({
             target: pathlib.join(dir.name, 'testexc'),

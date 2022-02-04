@@ -25,51 +25,46 @@ const readFromStream = (stream: NodeJS.ReadableStream, dest: string): Promise<vo
     });
 };
 
-export interface OptionsProps {
+type ExecIsOk = (filepath: string) => Promise<boolean>;
+
+export interface Options {
     url: string;
-    execIsOk: (filepath: string) => Promise<boolean>;
+    execIsOk?: ExecIsOk;
+    version?: string;
+    versionExecArgs?: Array<string>;
+    versionExecPostProcess?: (execOutput: string) => string;
 }
 
-export interface OptionsByVersionProps {
-    url: string;
-    version: string;
-    versionExecArgs: Array<string>;
-    versionExecPostProcess?: (output: string) => string;
-}
-
-export class Options {
-    readonly _url: string;
-    readonly _execIsOk: (filepath: string) => Promise<boolean>;
-
-    constructor(props: OptionsProps) {
-        this._url = props.url;
-        this._execIsOk = props.execIsOk;
+const optsExecIsOk = (opts: Options): ExecIsOk => {
+    if (opts.execIsOk) {
+        return opts.execIsOk;
+    }
+    if (opts.version) {
+        return async (filepath: string): Promise<boolean> => {
+            let out: string;
+            try {
+                out = execSync([filepath, ...(opts.versionExecArgs ?? [])].join(' '), { encoding: 'utf8' }).trim();
+            } catch (err) {
+                return false;
+            }
+            const processed = opts.versionExecPostProcess ? opts.versionExecPostProcess(out) : out;
+            return processed === opts.version;
+        };
     }
 
-    get url(): string {
-        return this._url;
-    }
+    throw new Error('Must set execIsOk or version');
+};
 
-    execIsOk(filepath: string): Promise<boolean> {
-        return this._execIsOk(filepath);
-    }
-
-    static version(props: OptionsByVersionProps): Options {
-        return new Options({
-            url: format(props.url, { version: props.version, platform: process.platform }),
-            execIsOk: async (filepath: string): Promise<boolean> => {
-                let out: string;
-                try {
-                    out = execSync([filepath, ...props.versionExecArgs].join(' '), { encoding: 'utf8' }).trim();
-                } catch (err) {
-                    return false;
-                }
-                const processed = props.versionExecPostProcess ? props.versionExecPostProcess(out) : out;
-                return processed === props.version;
-            },
-        });
-    }
-}
+const optsUrl = (opts: Options): string => {
+    return format(opts.url, {
+        ...(typeof opts.version !== 'undefined'
+            ? {
+                  version: opts.version,
+              }
+            : {}),
+        platform: process.platform,
+    });
+};
 
 export interface FetchExecutableProps {
     target: string;
@@ -78,13 +73,14 @@ export interface FetchExecutableProps {
 
 export const fetchExecutable = async (props: FetchExecutableProps): Promise<void> => {
     if (fs.existsSync(props.target)) {
-        const isOk: boolean = await props.options.execIsOk(props.target);
+        const execIsOkFn = optsExecIsOk(props.options);
+        const isOk: boolean = await execIsOkFn(props.target);
         if (isOk) {
             return Promise.resolve();
         }
     }
 
-    const url = props.options.url;
+    const url = optsUrl(props.options);
 
     const response = await axios.get(url, {
         responseType: 'stream',

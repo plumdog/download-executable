@@ -54,3 +54,72 @@ export const helmfile = async (targetPath: string, version: string): Promise<voi
         },
     });
 };
+
+export const helm = async (targetPath: string, version: string): Promise<void> => {
+    await fetchExecutable({
+        target: targetPath,
+        options: {
+            url: 'https://get.helm.sh/helm-v{version}-{platform}-amd64.tar.gz',
+            version,
+            versionExecArgs: ['version', '--short'],
+            versionExecPostProcess: (execOutput: string): string => {
+                const prefix = 'v';
+                if (!execOutput.startsWith(prefix)) {
+                    throw new Error('Unexpected output from helm version');
+                }
+                return execOutput.substring(prefix.length).trim().replace(/\+.*$/, '');
+            },
+            gzExtract: true,
+            pathInTar: '{platform}-amd64/helm',
+        },
+    });
+};
+
+export const eksctl = async (targetPath: string, version: string): Promise<void> => {
+    await fetchExecutable({
+        target: targetPath,
+        options: {
+            url: 'https://github.com/weaveworks/eksctl/releases/download/v{version}/eksctl_{platform!capitalize}_amd64.tar.gz',
+            version,
+            versionExecArgs: ['version'],
+            gzExtract: true,
+            pathInTar: 'eksctl',
+        },
+    });
+};
+
+export const minikube = async (targetPath: string, version: string): Promise<void> => {
+    await fetchExecutable({
+        target: targetPath,
+        options: {
+            url: 'https://storage.googleapis.com/minikube/releases/v{version}/minikube-{platform}-amd64',
+            version,
+            versionExecArgs: ['version', '--short'],
+            versionExecPostProcess: (execOutput: string): string => {
+                const prefix = 'v';
+                if (!execOutput.startsWith(prefix)) {
+                    throw new Error('Unexpected output from minikube version');
+                }
+                return execOutput.substring(prefix.length).trim();
+            },
+        },
+    });
+};
+
+export const gomplate = async (targetPath: string, version: string): Promise<void> => {
+    await fetchExecutable({
+        target: targetPath,
+        options: {
+            url: 'https://github.com/hairyhenderson/gomplate/releases/download/v{version}/gomplate_{platform}-amd64',
+            version,
+            versionExecArgs: ['--version'],
+            versionExecPostProcess: (execOutput: string): string => {
+                const prefix = 'gomplate version ';
+                if (!execOutput.startsWith(prefix)) {
+                    throw new Error('Unexpected output from gomplate version');
+                }
+                return execOutput.substring(prefix.length).trim();
+            },
+        },
+    });
+};

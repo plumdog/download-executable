@@ -2,10 +2,12 @@ import { fetchExecutable } from '..';
 import * as tmp from 'tmp';
 import * as pathlib from 'path';
 import * as fs from 'fs';
+import * as zlib from 'zlib';
 import { execSync } from 'child_process';
 import { Readable } from 'stream';
 import axios from 'axios';
 import MockAxiosAdapter from 'axios-mock-adapter';
+import * as tar from 'tar-stream';
 
 const mockAxios = new MockAxiosAdapter(axios, {
     onNoMatch: 'throwException',
@@ -17,8 +19,8 @@ afterEach(() => {
     mockAxios.reset();
 });
 
-const createBody = (body: string): NodeJS.ReadableStream => {
-    const buffer = Buffer.from(body, 'utf8');
+const createBody = (body: string | Buffer): NodeJS.ReadableStream => {
+    const buffer = typeof body === 'string' ? Buffer.from(body, 'utf8') : body;
     const readable = new Readable();
     readable._read = () => {
         // _read is required but you can noop it
@@ -26,6 +28,21 @@ const createBody = (body: string): NodeJS.ReadableStream => {
     readable.push(buffer);
     readable.push(null);
     return readable;
+};
+
+const streamToBuffer = (stream: NodeJS.ReadableStream): Promise<Buffer> => {
+    return new Promise((res, rej): void => {
+        const buffers: Array<Buffer> = [];
+        stream.on('data', (data) => {
+            buffers.push(data);
+        });
+        stream.on('error', (err) => {
+            rej(err);
+        });
+        stream.on('end', () => {
+            res(Buffer.concat(buffers));
+        });
+    });
 };
 
 const sampleExecutableFileContent = ['#!/bin/bash', '', 'echo 1.2.3', ''].join('\n');
@@ -91,6 +108,69 @@ describe('fetchs', () => {
         });
 
         expect(fs.readFileSync(pathlib.join(dir.name, 'testexc'), 'utf8')).toEqual('newfile');
+
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
+    test('can fetch file from tar', async () => {
+        const packTar = tar.pack();
+        packTar.entry(
+            {
+                name: 'mydir/mysubdir/myfile.sh',
+            },
+            sampleExecutableFileContent,
+        );
+        packTar.finalize();
+
+        const dir = tmp.dirSync();
+
+        mockAxios.onGet().reply(200, createBody(await streamToBuffer(packTar)));
+
+        const options = {
+            url: 'http://example.com/testexc_version_1.2.3.tar',
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            execIsOk: async (filepath: string): Promise<boolean> => false,
+            pathInTar: 'mydir/mysubdir/myfile.sh',
+        };
+
+        await fetchExecutable({
+            target: pathlib.join(dir.name, 'testexc'),
+            options,
+        });
+
+        expect(fs.readFileSync(pathlib.join(dir.name, 'testexc'), 'utf8')).toEqual(sampleExecutableFileContent);
+
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
+    test('can fetch file from tar.gz', async () => {
+        const packTar = tar.pack();
+        packTar.entry(
+            {
+                name: 'mydir/mysubdir/myfile.sh',
+            },
+            sampleExecutableFileContent,
+        );
+        packTar.finalize();
+
+        const dir = tmp.dirSync();
+
+        mockAxios.onGet().reply(200, createBody(zlib.gzipSync(await streamToBuffer(packTar))));
+
+        const options = {
+            url: 'http://example.com/testexc_version_1.2.3.tar',
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            execIsOk: async (filepath: string): Promise<boolean> => false,
+            pathInTar: 'mydir/mysubdir/myfile.sh',
+            gzExtract: true,
+        };
+
+        await fetchExecutable({
+            target: pathlib.join(dir.name, 'testexc'),
+            options,
+        });
+
+        expect(fs.readFileSync(pathlib.join(dir.name, 'testexc'), 'utf8')).toEqual(sampleExecutableFileContent);
 
         fs.rmdirSync(dir.name, { recursive: true });
     });

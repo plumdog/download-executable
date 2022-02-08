@@ -38,15 +38,27 @@ const optsExecIsOk = (opts: Options): ExecIsOk => {
     throw new Error('Must set execIsOk or version');
 };
 
+const fmt = format.create({
+    capitalize: (str: string): string => {
+        return str[0].toUpperCase() + str.slice(1);
+    },
+});
+
+const optsFormat =
+    (opts: Options) =>
+    (str: string): string => {
+        return fmt(str, {
+            ...(typeof opts.version !== 'undefined'
+                ? {
+                      version: opts.version,
+                  }
+                : {}),
+            platform: process.platform,
+        });
+    };
+
 const optsUrl = (opts: Options): string => {
-    return format(opts.url, {
-        ...(typeof opts.version !== 'undefined'
-            ? {
-                  version: opts.version,
-              }
-            : {}),
-        platform: process.platform,
-    });
+    return optsFormat(opts)(opts.url);
 };
 
 const saveFromStream = (stream: NodeJS.ReadableStream, dest: string): Promise<void> => {
@@ -110,7 +122,7 @@ const optsSave = async (opts: Options, stream: NodeJS.ReadableStream, dest: stri
     }
 
     if (opts.pathInTar) {
-        processedStream = extractFromTar(processedStream, opts.pathInTar);
+        processedStream = extractFromTar(processedStream, optsFormat(opts)(opts.pathInTar));
     }
 
     await saveFromStream(processedStream, dest);

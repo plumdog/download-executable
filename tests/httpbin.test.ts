@@ -19,7 +19,7 @@ describe('httpbin', () => {
         const options = {
             url: `https://httpbin.org/base64/${base64encode(sampleExecutableFileContent)}`,
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            execIsOk: async (filepath: string): Promise<boolean> => false,
+            execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
         };
 
         await fetchExecutable({

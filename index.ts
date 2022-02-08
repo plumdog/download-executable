@@ -134,8 +134,8 @@ export interface FetchExecutableProps {
 }
 
 export const fetchExecutable = async (props: FetchExecutableProps): Promise<void> => {
+    const execIsOkFn = optsExecIsOk(props.options);
     if (fs.existsSync(props.target)) {
-        const execIsOkFn = optsExecIsOk(props.options);
         const isOk: boolean = await execIsOkFn(props.target);
         if (isOk) {
             return Promise.resolve();
@@ -150,4 +150,9 @@ export const fetchExecutable = async (props: FetchExecutableProps): Promise<void
 
     await optsSave(props.options, response.data, props.target);
     fs.chmodSync(props.target, 0o755);
+
+    const newExecIsOk: boolean = await execIsOkFn(props.target);
+    if (!newExecIsOk) {
+        return Promise.reject(new Error(`Downloaded executable at ${props.target} failed check`));
+    }
 };

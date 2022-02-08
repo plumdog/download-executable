@@ -55,8 +55,7 @@ describe('fetchs', () => {
 
         const options = {
             url: 'http://example.com/testexc_version_1.2.3',
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            execIsOk: async (filepath: string): Promise<boolean> => false,
+            execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
         };
 
         await fetchExecutable({
@@ -102,8 +101,7 @@ describe('fetchs', () => {
             target: pathlib.join(dir.name, 'testexc'),
             options: {
                 url: 'http://example.com/testexc_version_1.2.3',
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                execIsOk: async (filepath: string): Promise<boolean> => Promise.resolve(false),
+                execIsOk: async (filepath: string): Promise<boolean> => fs.readFileSync(filepath, 'utf8').trim() !== 'oldfile',
             },
         });
 
@@ -128,8 +126,7 @@ describe('fetchs', () => {
 
         const options = {
             url: 'http://example.com/testexc_version_1.2.3.tar',
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            execIsOk: async (filepath: string): Promise<boolean> => false,
+            execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
             pathInTar: 'mydir/mysubdir/myfile.sh',
         };
 
@@ -159,8 +156,7 @@ describe('fetchs', () => {
 
         const options = {
             url: 'http://example.com/testexc_version_1.2.3.tar',
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            execIsOk: async (filepath: string): Promise<boolean> => false,
+            execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
             pathInTar: 'mydir/mysubdir/myfile.sh',
             gzExtract: true,
         };
@@ -171,6 +167,27 @@ describe('fetchs', () => {
         });
 
         expect(fs.readFileSync(pathlib.join(dir.name, 'testexc'), 'utf8')).toEqual(sampleExecutableFileContent);
+
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
+    test('rejects if fetched file fails version check', async () => {
+        const dir = tmp.dirSync();
+
+        mockAxios.onGet().reply(200, createBody(sampleExecutableFileContent));
+
+        expect.assertions(1);
+
+        await expect(
+            fetchExecutable({
+                target: pathlib.join(dir.name, 'testexc'),
+                options: {
+                    url: 'http://example.com/testexc_version_1.2.3',
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                    execIsOk: async (filepath: string): Promise<boolean> => false,
+                },
+            }),
+        ).rejects.toEqual(new Error(`Downloaded executable at ${dir.name}/testexc failed check`));
 
         fs.rmdirSync(dir.name, { recursive: true });
     });

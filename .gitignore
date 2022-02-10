@@ -9,4 +9,5 @@ node_modules
 !.prettierrc.js
 
 !jest.config.js
+!tests/setupTests.js
 coverage/

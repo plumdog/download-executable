@@ -7,6 +7,9 @@ module.exports = {
     "transform": {
         "^.+\\.ts$": "ts-jest"
     },
+    setupFiles: [
+        './tests/setupTests.js',
+    ],
     collectCoverage: true,
     collectCoverageFrom: [
         "**/*.{ts,js}",

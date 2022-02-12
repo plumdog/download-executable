@@ -3,6 +3,7 @@ import { execSync } from 'child_process';
 import * as streamlib from 'stream';
 import * as zlib from 'zlib';
 import * as tar from 'tar-stream';
+import * as crypto from 'crypto';
 import format from 'string-format';
 import axios from 'axios';
 
@@ -16,14 +17,54 @@ export interface Options {
     versionExecPostProcess?: (execOutput: string) => string;
     pathInTar?: string;
     gzExtract?: boolean;
+    hashMethod?: string;
+    hashValueUrl?: string;
+    hashChecksumFileMatchFilepath?: string;
 }
 
-const optsExecIsOk = (opts: Options): ExecIsOk => {
-    if (opts.execIsOk) {
-        return opts.execIsOk;
+const hashFile = (filepath: string, hashType: string): Promise<string> => {
+    return new Promise((res, rej) => {
+        const sum = crypto.createHash(hashType);
+        const stream = fs.createReadStream(filepath);
+        stream.on('error', (err) => {
+            rej(err);
+        });
+        stream.on('data', (chunk) => {
+            sum.update(chunk);
+        });
+        stream.on('end', () => {
+            res(sum.digest('hex'));
+        });
+    });
+};
+
+const readFromChecksumFile = (response: string, matchFilepath: string): string => {
+    for (const line of response.split('\n')) {
+        const firstSpaceIndex = line.indexOf(' ');
+        if (firstSpaceIndex === -1) {
+            continue;
+        }
+
+        const first = line.substr(0, firstSpaceIndex).trim();
+        const remaining = line.substr(firstSpaceIndex + 1).trim();
+
+        if (remaining === matchFilepath) {
+            return first;
+        }
     }
+
+    throw new Error(`Unable to find match for ${matchFilepath} in checksum file`);
+};
+
+const optsExecIsOk = (opts: Options): ExecIsOk => {
+    const checks: Array<ExecIsOk> = [];
+
+    if (opts.execIsOk) {
+        checks.push(opts.execIsOk);
+    }
+
     if (opts.version) {
-        return async (filepath: string): Promise<boolean> => {
+        checks.push(async (filepath: string): Promise<boolean> => {
             let out: string;
             try {
                 out = execSync([filepath, ...(opts.versionExecArgs ?? [])].join(' '), { encoding: 'utf8' }).trim();
@@ -32,10 +73,35 @@ const optsExecIsOk = (opts: Options): ExecIsOk => {
             }
             const processed = opts.versionExecPostProcess ? opts.versionExecPostProcess(out) : out;
             return processed === opts.version;
-        };
+        });
     }
 
-    throw new Error('Must set execIsOk or version');
+    if (opts.hashValueUrl) {
+        const hashValueUrl = optsFormat(opts)(opts.hashValueUrl);
+        checks.push(async (filepath: string): Promise<boolean> => {
+            const response = await axios.get(hashValueUrl);
+            const hashValueUrlResponse = response.data;
+            const expectedHashValue = opts.hashChecksumFileMatchFilepath
+                ? readFromChecksumFile(hashValueUrlResponse, optsFormat(opts)(opts.hashChecksumFileMatchFilepath))
+                : hashValueUrlResponse.trim();
+            const actualHashValue = await hashFile(filepath, opts.hashMethod ?? 'sha256');
+            return expectedHashValue.trim() === actualHashValue.trim();
+        });
+    }
+
+    if (checks.length === 0) {
+        throw new Error('Must set one of: execIsOk; version; hashValueUrl');
+    }
+
+    return async (filepath: string): Promise<boolean> => {
+        for (const check of checks) {
+            if (!(await check(filepath))) {
+                return false;
+            }
+        }
+
+        return true;
+    };
 };
 
 const fmt = format.create({

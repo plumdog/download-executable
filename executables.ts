@@ -4,7 +4,7 @@ export const kubectl = async (targetPath: string, version: string): Promise<void
     await fetchExecutable({
         target: targetPath,
         options: {
-            url: 'https://dl.k8s.io/release/v{version}/bin/{platform}/amd64/kubectl',
+            url: 'https://dl.k8s.io/release/v{version}/bin/{platform}/{arch!x64ToAmd64}/kubectl',
             version,
             versionExecArgs: ['version', '--client=true', '--short'],
             versionExecPostProcess: (execOutput: string): string => {
@@ -15,7 +15,7 @@ export const kubectl = async (targetPath: string, version: string): Promise<void
                 return execOutput.substring(prefix.length).trim();
             },
             hashMethod: 'sha256',
-            hashValueUrl: 'https://dl.k8s.io/v{version}/bin/{platform}/amd64/kubectl.sha256',
+            hashValueUrl: 'https://dl.k8s.io/v{version}/bin/{platform}/{arch!x64ToAmd64}/kubectl.sha256',
         },
     });
 };
@@ -43,7 +43,7 @@ export const helmfile = async (targetPath: string, version: string): Promise<voi
     await fetchExecutable({
         target: targetPath,
         options: {
-            url: 'https://github.com/roboll/helmfile/releases/download/v{version}/helmfile_{platform}_amd64',
+            url: 'https://github.com/roboll/helmfile/releases/download/v{version}/helmfile_{platform}_{arch!x64ToAmd64}',
             version,
             versionExecArgs: ['--version'],
             versionExecPostProcess: (execOutput: string): string => {
@@ -61,7 +61,7 @@ export const helm = async (targetPath: string, version: string): Promise<void> =
     await fetchExecutable({
         target: targetPath,
         options: {
-            url: 'https://get.helm.sh/helm-v{version}-{platform}-amd64.tar.gz',
+            url: 'https://get.helm.sh/helm-v{version}-{platform}-{arch!x64ToAmd64}.tar.gz',
             version,
             versionExecArgs: ['version', '--short'],
             versionExecPostProcess: (execOutput: string): string => {
@@ -72,7 +72,7 @@ export const helm = async (targetPath: string, version: string): Promise<void> =
                 return execOutput.substring(prefix.length).trim().replace(/\+.*$/, '');
             },
             gzExtract: true,
-            pathInTar: '{platform}-amd64/helm',
+            pathInTar: '{platform}-{arch!x64ToAmd64}/helm',
         },
     });
 };
@@ -81,7 +81,7 @@ export const eksctl = async (targetPath: string, version: string): Promise<void>
     await fetchExecutable({
         target: targetPath,
         options: {
-            url: 'https://github.com/weaveworks/eksctl/releases/download/v{version}/eksctl_{platform!capitalize}_amd64.tar.gz',
+            url: 'https://github.com/weaveworks/eksctl/releases/download/v{version}/eksctl_{platform!capitalize}_{arch!x64ToAmd64}.tar.gz',
             version,
             versionExecArgs: ['version'],
             gzExtract: true,
@@ -94,7 +94,7 @@ export const minikube = async (targetPath: string, version: string): Promise<voi
     await fetchExecutable({
         target: targetPath,
         options: {
-            url: 'https://storage.googleapis.com/minikube/releases/v{version}/minikube-{platform}-amd64',
+            url: 'https://storage.googleapis.com/minikube/releases/v{version}/minikube-{platform}-{arch!x64ToAmd64}',
             version,
             versionExecArgs: ['version', '--short'],
             versionExecPostProcess: (execOutput: string): string => {
@@ -104,7 +104,7 @@ export const minikube = async (targetPath: string, version: string): Promise<voi
                 }
                 return execOutput.substring(prefix.length).trim();
             },
-            hashValueUrl: 'https://github.com/kubernetes/minikube/releases/download/v{version}/minikube-{platform}-amd64.sha256',
+            hashValueUrl: 'https://github.com/kubernetes/minikube/releases/download/v{version}/minikube-{platform}-{arch!x64ToAmd64}.sha256',
         },
     });
 };
@@ -113,7 +113,7 @@ export const gomplate = async (targetPath: string, version: string): Promise<voi
     await fetchExecutable({
         target: targetPath,
         options: {
-            url: 'https://github.com/hairyhenderson/gomplate/releases/download/v{version}/gomplate_{platform}-amd64',
+            url: 'https://github.com/hairyhenderson/gomplate/releases/download/v{version}/gomplate_{platform}-{arch!x64ToAmd64}',
             version,
             versionExecArgs: ['--version'],
             versionExecPostProcess: (execOutput: string): string => {
@@ -125,7 +125,7 @@ export const gomplate = async (targetPath: string, version: string): Promise<voi
             },
             hashValueUrl: 'https://github.com/hairyhenderson/gomplate/releases/download/v{version}/checksums-v{version}_sha256.txt',
             hashMethod: 'sha256',
-            hashChecksumFileMatchFilepath: 'bin/gomplate_{platform}-amd64',
+            hashChecksumFileMatchFilepath: 'bin/gomplate_{platform}-{arch!x64ToAmd64}',
         },
     });
 };

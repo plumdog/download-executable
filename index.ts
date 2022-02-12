@@ -108,6 +108,12 @@ const fmt = format.create({
     capitalize: (str: string): string => {
         return str[0].toUpperCase() + str.slice(1);
     },
+    x64ToAmd64: (str: string): string => {
+        if (str === 'x64') {
+            return 'amd64';
+        }
+        return str;
+    },
 });
 
 const optsFormat =
@@ -120,6 +126,7 @@ const optsFormat =
                   }
                 : {}),
             platform: process.platform,
+            arch: process.arch,
         });
     };
 

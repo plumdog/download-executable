@@ -3,6 +3,7 @@ import * as tmp from 'tmp';
 import * as pathlib from 'path';
 import * as fs from 'fs';
 import * as zlib from 'zlib';
+import * as crypto from 'crypto';
 import { execSync } from 'child_process';
 import { Readable } from 'stream';
 import axios from 'axios';
@@ -45,7 +46,14 @@ const streamToBuffer = (stream: NodeJS.ReadableStream): Promise<Buffer> => {
     });
 };
 
+const sha256String = (str: string): string => {
+    const sum = crypto.createHash('sha256');
+    sum.update(str);
+    return sum.digest('hex');
+};
+
 const sampleExecutableFileContent = ['#!/bin/bash', '', 'echo 1.2.3', ''].join('\n');
+const sampleExecutableFileContentSha256Hash = sha256String(sampleExecutableFileContent);
 
 describe('fetchs', () => {
     test('can fetch file', async () => {
@@ -188,6 +196,72 @@ describe('fetchs', () => {
                 },
             }),
         ).rejects.toEqual(new Error(`Downloaded executable at ${dir.name}/testexc failed check`));
+
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
+    test('fetches if local file fails hash check', async () => {
+        const dir = tmp.dirSync();
+
+        const target = pathlib.join(dir.name, 'testexc');
+        fs.writeFileSync(target, [sampleExecutableFileContent, '', '# extra'].join('\n'));
+        fs.chmodSync(target, 0o755);
+
+        mockAxios.onGet('http://example.com/testexc_version_1.2.3').reply(200, createBody(sampleExecutableFileContent));
+        mockAxios.onGet('http://example.com/testexc_version_1.2.3_sha256').reply(200, sampleExecutableFileContentSha256Hash);
+
+        await fetchExecutable({
+            target: pathlib.join(dir.name, 'testexc'),
+            options: {
+                version: '1.2.3',
+                url: 'http://example.com/testexc_version_{version}',
+                hashValueUrl: 'http://example.com/testexc_version_{version}_sha256',
+            },
+        });
+
+        // expect(mockAxios.history.get).toEqual([]);
+
+        expect(fs.readFileSync(pathlib.join(dir.name, 'testexc'), 'utf8')).toEqual(sampleExecutableFileContent);
+
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
+    test('fetches if local file fails hash check using checksum file', async () => {
+        const dir = tmp.dirSync();
+
+        const target = pathlib.join(dir.name, 'testexc');
+        fs.writeFileSync(target, [sampleExecutableFileContent, '', '# extra'].join('\n'));
+        fs.chmodSync(target, 0o755);
+
+        mockAxios.onGet('http://example.com/testexc_version_1.2.3').reply(200, createBody(sampleExecutableFileContent));
+        mockAxios.onGet('http://example.com/testexc_version_1.2.3_sha256').reply(200, [`${sampleExecutableFileContentSha256Hash} testexc`, 'otherhash otherfile'].join('\n'));
+
+        await fetchExecutable({
+            target: pathlib.join(dir.name, 'testexc'),
+            options: {
+                version: '1.2.3',
+                url: 'http://example.com/testexc_version_{version}',
+                hashValueUrl: 'http://example.com/testexc_version_{version}_sha256',
+                hashChecksumFileMatchFilepath: 'testexc',
+            },
+        });
+
+        expect(fs.readFileSync(pathlib.join(dir.name, 'testexc'), 'utf8')).toEqual(sampleExecutableFileContent);
+
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
+    test('rejects if no way to check version', async () => {
+        const dir = tmp.dirSync();
+
+        await expect(
+            fetchExecutable({
+                target: pathlib.join(dir.name, 'testexc'),
+                options: {
+                    url: 'http://example.com/testexc_version_1.2.3',
+                },
+            }),
+        ).rejects.toEqual(new Error('Must set one of: execIsOk; version; hashValueUrl'));
 
         fs.rmdirSync(dir.name, { recursive: true });
     });

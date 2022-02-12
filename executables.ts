@@ -14,6 +14,8 @@ export const kubectl = async (targetPath: string, version: string): Promise<void
                 }
                 return execOutput.substring(prefix.length).trim();
             },
+            hashMethod: 'sha256',
+            hashValueUrl: 'https://dl.k8s.io/v{version}/bin/{platform}/amd64/kubectl.sha256',
         },
     });
 };
@@ -102,6 +104,7 @@ export const minikube = async (targetPath: string, version: string): Promise<voi
                 }
                 return execOutput.substring(prefix.length).trim();
             },
+            hashValueUrl: 'https://github.com/kubernetes/minikube/releases/download/v{version}/minikube-{platform}-amd64.sha256',
         },
     });
 };
@@ -120,6 +123,9 @@ export const gomplate = async (targetPath: string, version: string): Promise<voi
                 }
                 return execOutput.substring(prefix.length).trim();
             },
+            hashValueUrl: 'https://github.com/hairyhenderson/gomplate/releases/download/v{version}/checksums-v{version}_sha256.txt',
+            hashMethod: 'sha256',
+            hashChecksumFileMatchFilepath: 'bin/gomplate_{platform}-amd64',
         },
     });
 };

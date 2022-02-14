@@ -16,15 +16,11 @@ describe('httpbin', () => {
     test('get from httpbin', async () => {
         const dir = tmp.dirSync();
 
-        const options = {
+        await fetchExecutable({
+            target: pathlib.join(dir.name, 'testexc'),
             url: `https://httpbin.org/base64/${base64encode(sampleExecutableFileContent)}`,
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
-        };
-
-        await fetchExecutable({
-            target: pathlib.join(dir.name, 'testexc'),
-            options,
         });
 
         expect(fs.readFileSync(pathlib.join(dir.name, 'testexc'), 'utf8')).toEqual(sampleExecutableFileContent);

@@ -9,7 +9,8 @@ import axios from 'axios';
 
 type ExecIsOk = (filepath: string) => Promise<boolean>;
 
-export interface Options {
+export interface FetchExecutableOptions {
+    target: string;
     url: string;
     execIsOk?: ExecIsOk;
     version?: string;
@@ -56,35 +57,35 @@ const readFromChecksumFile = (response: string, matchFilepath: string): string =
     throw new Error(`Unable to find match for ${matchFilepath} in checksum file`);
 };
 
-const optsExecIsOk = (opts: Options): ExecIsOk => {
+const optionsExecIsOk = (options: FetchExecutableOptions): ExecIsOk => {
     const checks: Array<ExecIsOk> = [];
 
-    if (opts.execIsOk) {
-        checks.push(opts.execIsOk);
+    if (options.execIsOk) {
+        checks.push(options.execIsOk);
     }
 
-    if (opts.version) {
+    if (options.version) {
         checks.push(async (filepath: string): Promise<boolean> => {
             let out: string;
             try {
-                out = execSync([filepath, ...(opts.versionExecArgs ?? [])].join(' '), { encoding: 'utf8' }).trim();
+                out = execSync([filepath, ...(options.versionExecArgs ?? [])].join(' '), { encoding: 'utf8' }).trim();
             } catch (err) {
                 return false;
             }
-            const processed = opts.versionExecPostProcess ? opts.versionExecPostProcess(out) : out;
-            return processed === opts.version;
+            const processed = options.versionExecPostProcess ? options.versionExecPostProcess(out) : out;
+            return processed === options.version;
         });
     }
 
-    if (opts.hashValueUrl) {
-        const hashValueUrl = optsFormat(opts)(opts.hashValueUrl);
+    if (options.hashValueUrl) {
+        const hashValueUrl = optionsFormat(options)(options.hashValueUrl);
         checks.push(async (filepath: string): Promise<boolean> => {
             const response = await axios.get(hashValueUrl);
             const hashValueUrlResponse = response.data;
-            const expectedHashValue = opts.hashChecksumFileMatchFilepath
-                ? readFromChecksumFile(hashValueUrlResponse, optsFormat(opts)(opts.hashChecksumFileMatchFilepath))
+            const expectedHashValue = options.hashChecksumFileMatchFilepath
+                ? readFromChecksumFile(hashValueUrlResponse, optionsFormat(options)(options.hashChecksumFileMatchFilepath))
                 : hashValueUrlResponse.trim();
-            const actualHashValue = await hashFile(filepath, opts.hashMethod ?? 'sha256');
+            const actualHashValue = await hashFile(filepath, options.hashMethod ?? 'sha256');
             return expectedHashValue.trim() === actualHashValue.trim();
         });
     }
@@ -116,13 +117,13 @@ const fmt = format.create({
     },
 });
 
-const optsFormat =
-    (opts: Options) =>
+const optionsFormat =
+    (options: FetchExecutableOptions) =>
     (str: string): string => {
         return fmt(str, {
-            ...(typeof opts.version !== 'undefined'
+            ...(typeof options.version !== 'undefined'
                 ? {
-                      version: opts.version,
+                      version: options.version,
                   }
                 : {}),
             platform: process.platform,
@@ -130,8 +131,8 @@ const optsFormat =
         });
     };
 
-const optsUrl = (opts: Options): string => {
-    return optsFormat(opts)(opts.url);
+const optionsUrl = (options: FetchExecutableOptions): string => {
+    return optionsFormat(options)(options.url);
 };
 
 const saveFromStream = (stream: NodeJS.ReadableStream, dest: string): Promise<void> => {
@@ -187,45 +188,40 @@ const extractFromTar = (inStream: NodeJS.ReadableStream, pathInTar: string): Nod
     return outStream;
 };
 
-const optsSave = async (opts: Options, stream: NodeJS.ReadableStream, dest: string): Promise<void> => {
+const optionsSave = async (options: FetchExecutableOptions, stream: NodeJS.ReadableStream, dest: string): Promise<void> => {
     let processedStream = stream;
 
-    if (opts.gzExtract) {
+    if (options.gzExtract) {
         processedStream = processedStream.pipe(zlib.createGunzip());
     }
 
-    if (opts.pathInTar) {
-        processedStream = extractFromTar(processedStream, optsFormat(opts)(opts.pathInTar));
+    if (options.pathInTar) {
+        processedStream = extractFromTar(processedStream, optionsFormat(options)(options.pathInTar));
     }
 
     await saveFromStream(processedStream, dest);
 };
 
-export interface FetchExecutableProps {
-    target: string;
-    options: Options;
-}
-
-export const fetchExecutable = async (props: FetchExecutableProps): Promise<void> => {
-    const execIsOkFn = optsExecIsOk(props.options);
-    if (fs.existsSync(props.target)) {
-        const isOk: boolean = await execIsOkFn(props.target);
+export const fetchExecutable = async (options: FetchExecutableOptions): Promise<void> => {
+    const execIsOkFn = optionsExecIsOk(options);
+    if (fs.existsSync(options.target)) {
+        const isOk: boolean = await execIsOkFn(options.target);
         if (isOk) {
             return Promise.resolve();
         }
     }
 
-    const url = optsUrl(props.options);
+    const url = optionsUrl(options);
 
     const response = await axios.get(url, {
         responseType: 'stream',
     });
 
-    await optsSave(props.options, response.data, props.target);
-    fs.chmodSync(props.target, 0o755);
+    await optionsSave(options, response.data, options.target);
+    fs.chmodSync(options.target, 0o755);
 
-    const newExecIsOk: boolean = await execIsOkFn(props.target);
+    const newExecIsOk: boolean = await execIsOkFn(options.target);
     if (!newExecIsOk) {
-        return Promise.reject(new Error(`Downloaded executable at ${props.target} failed check`));
+        return Promise.reject(new Error(`Downloaded executable at ${options.target} failed check`));
     }
 };

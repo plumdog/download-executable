@@ -115,3 +115,23 @@ export const gomplate = async (targetPath: string, version: string): Promise<voi
         hashChecksumFileMatchFilepath: 'bin/gomplate_{platform}-{arch!x64ToAmd64}',
     });
 };
+
+export const mysqlsh = async (targetPath: string, version: string, symlinkPath?: string): Promise<void> => {
+    await fetchExecutable({
+        target: targetPath,
+        url: 'https://dev.mysql.com/get/Downloads/MySQL-Shell/mysql-shell-{version}-linux-glibc2.12-x86-64bit.tar.gz',
+        version,
+        versionExecArgs: ['--version'],
+        versionExecPostProcess: (execOutput: string): string => {
+            const matches = execOutput.match(/\d+\.\d+\.\d+/);
+            if (matches) {
+                return matches[0];
+            }
+            throw new Error('Unexpect output from mysqlsh --version');
+        },
+        pathInTar: 'mysql-shell-{version}-linux-glibc2.12-x86-64bit',
+        gzExtract: true,
+        executableSubPathInDir: 'bin/mysqlsh',
+        executableSubPathSymlink: symlinkPath,
+    });
+};

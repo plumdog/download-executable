@@ -24,3 +24,16 @@ jest.mock('tar-stream', () => {
         ...jest.requireActual('tar-stream'),
     };
 });
+
+jest.mock('tar', () => {
+    if (process.env.OLD_DEPENDENCIES) {
+        return {
+            __esModule: true,
+            ...jest.requireActual('tar-old'),
+        };
+    }
+    return {
+        __esModule: true,
+        ...jest.requireActual('tar'),
+    };
+});

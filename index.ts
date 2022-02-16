@@ -2,8 +2,10 @@ import * as fs from 'fs';
 import { execSync } from 'child_process';
 import * as streamlib from 'stream';
 import * as zlib from 'zlib';
-import * as tar from 'tar-stream';
+import * as tarStream from 'tar-stream';
+import * as tar from 'tar';
 import * as crypto from 'crypto';
+import * as pathlib from 'path';
 import format from 'string-format';
 import axios from 'axios';
 
@@ -17,6 +19,8 @@ export interface FetchExecutableOptions {
     versionExecArgs?: Array<string>;
     versionExecPostProcess?: (execOutput: string) => string;
     pathInTar?: string;
+    executableSubPathInDir?: string;
+    executableSubPathSymlink?: string;
     gzExtract?: boolean;
     hashMethod?: string;
     hashValueUrl?: string;
@@ -78,6 +82,10 @@ const optionsExecIsOk = (options: FetchExecutableOptions): ExecIsOk => {
     }
 
     if (options.hashValueUrl) {
+        if (options.executableSubPathInDir) {
+            throw new Error('Cannot use executableSubPathInDir with hashValueUrl');
+        }
+
         const hashValueUrl = optionsFormat(options)(options.hashValueUrl);
         checks.push(async (filepath: string): Promise<boolean> => {
             const response = await axios.get(hashValueUrl);
@@ -159,7 +167,7 @@ const saveFromStream = (stream: NodeJS.ReadableStream, dest: string): Promise<vo
 };
 
 const extractFromTar = (inStream: NodeJS.ReadableStream, pathInTar: string): NodeJS.ReadableStream => {
-    const extract = tar.extract();
+    const extract = tarStream.extract();
 
     const outStream = new streamlib.PassThrough();
     let found = false;
@@ -188,6 +196,68 @@ const extractFromTar = (inStream: NodeJS.ReadableStream, pathInTar: string): Nod
     return outStream;
 };
 
+const extractDirectoryFromTarAndSave = (inStream: NodeJS.ReadableStream, dirPathInTar: string, dest: string): Promise<void> => {
+    return new Promise((res, rej) => {
+        // fs.rmSync added in 14.14.0, see https://nodejs.org/api/fs.html#fsrmsyncpath-options
+        /* istanbul ignore next */
+        if (fs.rmSync) {
+            fs.rmSync(dest, {
+                recursive: true,
+                force: true,
+            });
+        } else {
+            try {
+                fs.rmdirSync(dest, {
+                    recursive: true,
+                });
+            } catch (err) {
+                if (err.code === 'ENOENT') {
+                    // Not there, that's fine
+                } else {
+                    throw err;
+                }
+            }
+        }
+
+        fs.mkdirSync(dest, {
+            recursive: true,
+        });
+
+        let anyPathsFound = false;
+
+        const stripCount = dirPathInTar.replace(new RegExp(`${pathlib.sep}+$`), '').split(pathlib.sep).length;
+        const stream = tar.extract({
+            cwd: dest,
+            filter: (path: string): boolean => {
+                if (path.startsWith(dirPathInTar)) {
+                    anyPathsFound = true;
+                    return true;
+                }
+                return false;
+            },
+            strip: stripCount,
+        } as tar.ExtractOptions);
+
+        inStream.pipe(stream);
+
+        stream.on('finish', () => {
+            if (anyPathsFound) {
+                res();
+            } else {
+                rej(new Error(`Failed to find ${dirPathInTar} in tar`));
+            }
+        });
+
+        stream.on('error', (err: Error) => {
+            rej(err);
+        });
+
+        inStream.on('error', (err) => {
+            rej(err);
+        });
+    });
+};
+
 const optionsSave = async (options: FetchExecutableOptions, stream: NodeJS.ReadableStream, dest: string): Promise<void> => {
     let processedStream = stream;
 
@@ -196,7 +266,25 @@ const optionsSave = async (options: FetchExecutableOptions, stream: NodeJS.Reada
     }
 
     if (options.pathInTar) {
-        processedStream = extractFromTar(processedStream, optionsFormat(options)(options.pathInTar));
+        if (options.executableSubPathInDir) {
+            await extractDirectoryFromTarAndSave(processedStream, optionsFormat(options)(options.pathInTar), dest);
+            if (options.executableSubPathSymlink) {
+                const symlinkTarget = pathlib.relative(pathlib.dirname(options.executableSubPathSymlink), pathlib.join(dest, options.executableSubPathInDir));
+                try {
+                    fs.unlinkSync(options.executableSubPathSymlink);
+                } catch (err) {
+                    if (err.code === 'ENOENT') {
+                        // That's fine
+                    } else {
+                        throw err;
+                    }
+                }
+                fs.symlinkSync(symlinkTarget, options.executableSubPathSymlink);
+            }
+            return;
+        } else {
+            processedStream = extractFromTar(processedStream, optionsFormat(options)(options.pathInTar));
+        }
     }
 
     await saveFromStream(processedStream, dest);
@@ -204,9 +292,12 @@ const optionsSave = async (options: FetchExecutableOptions, stream: NodeJS.Reada
 
 export const fetchExecutable = async (options: FetchExecutableOptions): Promise<void> => {
     const execIsOkFn = optionsExecIsOk(options);
-    if (fs.existsSync(options.target)) {
-        const isOk: boolean = await execIsOkFn(options.target);
-        if (isOk) {
+    const target = options.executableSubPathInDir ? pathlib.join(options.target, optionsFormat(options)(options.executableSubPathInDir)) : options.target;
+    if (fs.existsSync(target)) {
+        const isOk: boolean = await execIsOkFn(target);
+        const symlinkIsOk: boolean = options.pathInTar && options.executableSubPathInDir && options.executableSubPathSymlink ? await execIsOkFn(options.executableSubPathSymlink) : true;
+
+        if (isOk && symlinkIsOk) {
             return Promise.resolve();
         }
     }
@@ -218,10 +309,10 @@ export const fetchExecutable = async (options: FetchExecutableOptions): Promise<
     });
 
     await optionsSave(options, response.data, options.target);
-    fs.chmodSync(options.target, 0o755);
+    fs.chmodSync(target, 0o755);
 
-    const newExecIsOk: boolean = await execIsOkFn(options.target);
+    const newExecIsOk: boolean = await execIsOkFn(target);
     if (!newExecIsOk) {
-        return Promise.reject(new Error(`Downloaded executable at ${options.target} failed check`));
+        return Promise.reject(new Error(`Downloaded executable at ${target} failed check`));
     }
 };

@@ -163,6 +163,239 @@ describe('fetchs', () => {
         fs.rmdirSync(dir.name, { recursive: true });
     });
 
+    test('can fetch directory from tar', async () => {
+        const packTar = tar.pack();
+        packTar.entry(
+            {
+                name: 'mydir/testexc/main.sh',
+            },
+            ['#!/bin/bash', '', 'SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"', '', 'cat "$SCRIPT_DIR"/version.txt'].join('\n'),
+        );
+        packTar.entry(
+            {
+                name: 'mydir/testexc/version.txt',
+            },
+            '1.2.3',
+        );
+        packTar.finalize();
+
+        const dir = tmp.dirSync();
+
+        mockAxios.onGet().reply(200, createBody(await streamToBuffer(packTar)));
+
+        await fetchExecutable({
+            target: pathlib.join(dir.name, 'testexc'),
+            url: 'http://example.com/testexc_version_1.2.3.tar',
+            execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
+            pathInTar: 'mydir/testexc/',
+            executableSubPathInDir: 'main.sh',
+        });
+
+        expect(fs.readFileSync(pathlib.join(dir.name, 'testexc', 'version.txt'), 'utf8').trim()).toEqual('1.2.3');
+
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
+    test('can fetch directory from tar with symlink', async () => {
+        const packTar = tar.pack();
+        packTar.entry(
+            {
+                name: 'mydir/testexc/main.sh',
+            },
+            ['#!/bin/bash', '', 'SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"', '', 'cat "$SCRIPT_DIR"/version.txt'].join('\n'),
+        );
+        packTar.entry(
+            {
+                name: 'mydir/testexc/version.txt',
+            },
+            '1.2.3',
+        );
+        packTar.finalize();
+
+        const dir = tmp.dirSync();
+
+        mockAxios.onGet().reply(200, createBody(await streamToBuffer(packTar)));
+
+        await fetchExecutable({
+            target: pathlib.join(dir.name, 'testexc_dir'),
+            url: 'http://example.com/testexc_version_1.2.3.tar',
+            execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
+            pathInTar: 'mydir/testexc/',
+            executableSubPathInDir: 'main.sh',
+            executableSubPathSymlink: pathlib.join(dir.name, 'testexc.sh'),
+        });
+
+        expect(execSync(pathlib.join(dir.name, 'testexc.sh'), { encoding: 'utf8' }).trim()).toEqual('1.2.3');
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
+    test('does not fetch directory from tar if already exists', async () => {
+        const dir = tmp.dirSync();
+
+        fs.mkdirSync(pathlib.join(dir.name, 'testexc'));
+        fs.writeFileSync(pathlib.join(dir.name, 'testexc', 'main.sh'), ['#!/bin/bash', '', 'SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"', '', 'cat "$SCRIPT_DIR"/version.txt'].join('\n'), 'utf8');
+        fs.chmodSync(pathlib.join(dir.name, 'testexc', 'main.sh'), 0o775);
+        fs.writeFileSync(pathlib.join(dir.name, 'testexc', 'version.txt'), '1.2.3', 'utf8');
+
+        await fetchExecutable({
+            target: pathlib.join(dir.name, 'testexc'),
+            url: 'http://example.com/testexc_version_1.2.3.tar',
+            execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
+            pathInTar: 'mydir/testexc/',
+            executableSubPathInDir: 'main.sh',
+        });
+
+        expect(mockAxios.history.get).toEqual([]);
+        expect(execSync(pathlib.join(dir.name, 'testexc', 'main.sh'), { encoding: 'utf8' }).trim()).toEqual('1.2.3');
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
+    test('handles if target for directory from tar exists but is a file', async () => {
+        const packTar = tar.pack();
+        packTar.entry(
+            {
+                name: 'mydir/testexc/main.sh',
+            },
+            ['#!/bin/bash', '', 'SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"', '', 'cat "$SCRIPT_DIR"/version.txt'].join('\n'),
+        );
+        packTar.entry(
+            {
+                name: 'mydir/testexc/version.txt',
+            },
+            '1.2.3',
+        );
+        packTar.finalize();
+
+        const dir = tmp.dirSync();
+
+        mockAxios.onGet().reply(200, createBody(await streamToBuffer(packTar)));
+
+        fs.writeFileSync(pathlib.join(dir.name, 'testexc'), 'a file, not a directory, should be deleted', 'utf8');
+
+        await fetchExecutable({
+            target: pathlib.join(dir.name, 'testexc'),
+            url: 'http://example.com/testexc_version_1.2.3.tar',
+            execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
+            pathInTar: 'mydir/testexc/',
+            executableSubPathInDir: 'main.sh',
+        });
+
+        expect(mockAxios.history.get.length).toEqual(1);
+        expect(execSync(pathlib.join(dir.name, 'testexc', 'main.sh'), { encoding: 'utf8' }).trim()).toEqual('1.2.3');
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
+    test('does not fetch directory from tar if already exists with symlink', async () => {
+        const dir = tmp.dirSync();
+
+        fs.mkdirSync(pathlib.join(dir.name, 'testexc_dir'));
+        fs.writeFileSync(
+            pathlib.join(dir.name, 'testexc_dir', 'main.sh'),
+            ['#!/bin/bash', '', 'SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"', '', 'cat "$SCRIPT_DIR"/version.txt'].join('\n'),
+            'utf8',
+        );
+        fs.chmodSync(pathlib.join(dir.name, 'testexc_dir', 'main.sh'), 0o775);
+        fs.writeFileSync(pathlib.join(dir.name, 'testexc_dir', 'version.txt'), '1.2.3', 'utf8');
+        fs.symlinkSync(pathlib.join('./', 'testexc_dir', 'main.sh'), pathlib.join(dir.name, 'testexc.sh'));
+
+        await fetchExecutable({
+            target: pathlib.join(dir.name, 'testexc_dir'),
+            url: 'http://example.com/testexc_version_1.2.3.tar',
+            execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
+            pathInTar: 'mydir/testexc/',
+            executableSubPathInDir: 'main.sh',
+            executableSubPathSymlink: pathlib.join(dir.name, 'testexc.sh'),
+        });
+
+        expect(mockAxios.history.get).toEqual([]);
+        expect(execSync(pathlib.join(dir.name, 'testexc_dir', 'main.sh'), { encoding: 'utf8' }).trim()).toEqual('1.2.3');
+        expect(execSync(pathlib.join(dir.name, 'testexc.sh'), { encoding: 'utf8' }).trim()).toEqual('1.2.3');
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
+    test('does fetch directory from tar if already exists but missing symlink', async () => {
+        const packTar = tar.pack();
+        packTar.entry(
+            {
+                name: 'mydir/testexc/main.sh',
+            },
+            ['#!/bin/bash', '', 'SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"', '', 'cat "$SCRIPT_DIR"/version.txt'].join('\n'),
+        );
+        packTar.entry(
+            {
+                name: 'mydir/testexc/version.txt',
+            },
+            '1.2.3',
+        );
+        packTar.finalize();
+
+        const dir = tmp.dirSync();
+
+        mockAxios.onGet().reply(200, createBody(await streamToBuffer(packTar)));
+
+        fs.mkdirSync(pathlib.join(dir.name, 'testexc_dir'));
+        fs.writeFileSync(
+            pathlib.join(dir.name, 'testexc_dir', 'main.sh'),
+            ['#!/bin/bash', '', 'SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"', '', 'cat "$SCRIPT_DIR"/version.txt'].join('\n'),
+            'utf8',
+        );
+        fs.chmodSync(pathlib.join(dir.name, 'testexc_dir', 'main.sh'), 0o775);
+        fs.writeFileSync(pathlib.join(dir.name, 'testexc_dir', 'version.txt'), '1.2.3', 'utf8');
+        // No symlink
+
+        // But executable itself OK
+        expect(execSync(pathlib.join(dir.name, 'testexc_dir', 'main.sh'), { encoding: 'utf8' }).trim()).toEqual('1.2.3');
+
+        await fetchExecutable({
+            target: pathlib.join(dir.name, 'testexc_dir'),
+            url: 'http://example.com/testexc_version_1.2.3.tar',
+            execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
+            pathInTar: 'mydir/testexc/',
+            executableSubPathInDir: 'main.sh',
+            // But symlink wanted
+            executableSubPathSymlink: pathlib.join(dir.name, 'testexc.sh'),
+        });
+
+        expect(mockAxios.history.get.length).toEqual(1);
+        expect(execSync(pathlib.join(dir.name, 'testexc_dir', 'main.sh'), { encoding: 'utf8' }).trim()).toEqual('1.2.3');
+        // Symlink now exists and works
+        expect(execSync(pathlib.join(dir.name, 'testexc.sh'), { encoding: 'utf8' }).trim()).toEqual('1.2.3');
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
+    test('fails if path not in directory from tar', async () => {
+        const packTar = tar.pack();
+        packTar.entry(
+            {
+                name: 'mydir/testexc/main.sh',
+            },
+            ['#!/bin/bash', '', 'SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"', '', 'cat "$SCRIPT_DIR"/version.txt'].join('\n'),
+        );
+        packTar.entry(
+            {
+                name: 'mydir/testexc/version.txt',
+            },
+            '1.2.3',
+        );
+        packTar.finalize();
+
+        const dir = tmp.dirSync();
+
+        mockAxios.onGet().reply(200, createBody(await streamToBuffer(packTar)));
+
+        await expect(
+            fetchExecutable({
+                target: pathlib.join(dir.name, 'testexc'),
+                url: 'http://example.com/testexc_version_1.2.3.tar',
+                execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
+                pathInTar: 'mydir/doesnotexist/',
+                executableSubPathInDir: 'main.sh',
+            }),
+        ).rejects.toEqual(new Error('Failed to find mydir/doesnotexist/ in tar'));
+
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
     test('rejects if fetched file fails version check', async () => {
         const dir = tmp.dirSync();
 

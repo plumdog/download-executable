@@ -55,7 +55,7 @@ const sha256String = (str: string): string => {
 const sampleExecutableFileContent = ['#!/bin/bash', '', 'echo 1.2.3', ''].join('\n');
 const sampleExecutableFileContentSha256Hash = sha256String(sampleExecutableFileContent);
 
-describe('fetchs', () => {
+describe('fetch', () => {
     test('can fetch file', async () => {
         const dir = tmp.dirSync();
 
@@ -495,9 +495,7 @@ describe('fetchs', () => {
 
         fs.rmdirSync(dir.name, { recursive: true });
     });
-});
 
-describe('fetchs using version shortcut', () => {
     test('can fetch file by version shortcut', async () => {
         const dir = tmp.dirSync();
 

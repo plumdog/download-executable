@@ -396,6 +396,27 @@ describe('fetchs', () => {
         fs.rmdirSync(dir.name, { recursive: true });
     });
 
+    test('can bz2Extract file', async () => {
+        // Result of running:
+        // (echo '#!/bin/bash'; echo; echo 'echo 1.2.3') | bzip2 | base64 -w 0
+        const bz2SampleExecutableFileContent = 'QlpoOTFBWSZTWd/+5C4AAALZgAAQaAG4ADphiAAgADFNMjExMQiNAekyPSQFOVDEBkh08JOJM/F3JFOFCQ3/7kLg';
+
+        const dir = tmp.dirSync();
+
+        mockAxios.onGet().reply(200, createBody(Buffer.from(bz2SampleExecutableFileContent, 'base64')));
+
+        await fetchExecutable({
+            target: pathlib.join(dir.name, 'testexc'),
+            url: 'http://example.com/testexc_version_1.2.3.bz2',
+            execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
+            bz2Extract: true,
+        });
+
+        expect(fs.readFileSync(pathlib.join(dir.name, 'testexc'), 'utf8')).toEqual(sampleExecutableFileContent);
+
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
     test('rejects if fetched file fails version check', async () => {
         const dir = tmp.dirSync();
 

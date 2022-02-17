@@ -11,3 +11,5 @@ node_modules
 !jest.config.js
 !tests/setupTests.js
 coverage/
+
+!types/*.d.ts

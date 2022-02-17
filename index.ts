@@ -6,6 +6,7 @@ import * as tarStream from 'tar-stream';
 import * as tar from 'tar';
 import * as crypto from 'crypto';
 import * as pathlib from 'path';
+import bz2 from 'unbzip2-stream';
 import format from 'string-format';
 import axios from 'axios';
 
@@ -22,6 +23,7 @@ export interface FetchExecutableOptions {
     executableSubPathInDir?: string;
     executableSubPathSymlink?: string;
     gzExtract?: boolean;
+    bz2Extract?: boolean;
     hashMethod?: string;
     hashValueUrl?: string;
     hashChecksumFileMatchFilepath?: string;
@@ -263,6 +265,10 @@ const optionsSave = async (options: FetchExecutableOptions, stream: NodeJS.Reada
 
     if (options.gzExtract) {
         processedStream = processedStream.pipe(zlib.createGunzip());
+    }
+
+    if (options.bz2Extract) {
+        processedStream = processedStream.pipe(bz2());
     }
 
     if (options.pathInTar) {

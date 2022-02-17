@@ -135,3 +135,21 @@ export const mysqlsh = async (targetPath: string, version: string, symlinkPath?:
         executableSubPathSymlink: symlinkPath,
     });
 };
+
+export const usql = async (targetPath: string, version: string): Promise<void> => {
+    await fetchExecutable({
+        target: targetPath,
+        url: 'https://github.com/xo/usql/releases/download/v{version}/usql_static-{version}-{platform}-{arch!x64ToAmd64}.tar.bz2',
+        version,
+        versionExecArgs: ['--version'],
+        versionExecPostProcess: (execOutput: string): string => {
+            const prefix = 'usql ';
+            if (!execOutput.startsWith(prefix)) {
+                throw new Error('Unexpected output from usql version');
+            }
+            return execOutput.substring(prefix.length).trim();
+        },
+        pathInTar: 'usql_static',
+        bz2Extract: true,
+    });
+};

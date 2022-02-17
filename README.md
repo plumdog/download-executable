@@ -126,6 +126,19 @@ Type: `boolean`
 If set to `true`, gzip-extract the downloaded file. Can be used in
 conjunction with `pathInTar` to handle `.tar.gz` files.
 
+### `bz2Extract`
+
+Required?: no, defaults to saving the downloaded file as-is
+
+Type: `boolean`
+
+If set to `true`, bz2-extract the downloaded file. Can be used in
+conjunction with `pathInTar` to handle `.tar.bz2` files.
+
+Note: if `bz2Extract` and `gzExtract` are both set to `true`, will
+gzip-extract then bz2-extract, but this is not expected to be a real
+use case.
+
 ### `hashValueUrl`
 
 Required?: must set one of: `execIsOk`; `version`; `hashValueUrl`

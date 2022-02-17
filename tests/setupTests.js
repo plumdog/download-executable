@@ -37,3 +37,10 @@ jest.mock('tar', () => {
         ...jest.requireActual('tar'),
     };
 });
+
+jest.mock('unbzip2-stream', () => {
+    if (process.env.OLD_DEPENDENCIES) {
+        return jest.requireActual('unbzip2-stream-old');
+    }
+    return jest.requireActual('unbzip2-stream');
+});

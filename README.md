@@ -198,6 +198,7 @@ interface FetchExecutableMessage {
 The `kind` string attribute will be one of:
 - `'executable_is_ok'`, when the pre-existing executable has been checked and is OK
 - `'fetching'`, when starting to fetch
+- `'fetch_progress'`, progress during fetch
 - `'saving'`, when starting to save
 - `'done'`, when saved and made executable
 

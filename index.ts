@@ -377,6 +377,28 @@ export const fetchExecutable = async (options: FetchExecutableOptions): Promise<
         isVerbose: true,
     });
 
+    const contentLengthRaw: string | undefined = (response.headers && response.headers['content-length']) ?? undefined;
+    const contentLength: number | undefined = contentLengthRaw ? parseInt(contentLengthRaw, 10) : undefined;
+
+    let bytesDownloaded = 0;
+    let lastPercentageReported = 0;
+
+    if (contentLength) {
+        response.data.on('data', (chunk: Buffer) => {
+            bytesDownloaded += chunk.length;
+            const percentage = Math.round((100 * bytesDownloaded) / contentLength);
+            if (percentage > lastPercentageReported + 5) {
+                messager({
+                    message: `Downloading from ${url} (${percentage}%)`,
+                    kind: 'fetch_progress',
+                    target,
+                    isVerbose: true,
+                });
+                lastPercentageReported = percentage;
+            }
+        });
+    }
+
     await optionsSave(options, response.data, options.target);
     fs.chmodSync(target, 0o755);
 

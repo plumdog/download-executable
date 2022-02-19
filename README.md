@@ -172,6 +172,67 @@ rather a list of hashes as returned by a utility like `sha256sum`,
 that lists hashes and filenames, use this to identify the filename
 whose hash to use.
 
+### `messager`
+
+Required?: no
+
+Type: `(message: FetchExecutableMessage) => void`
+
+A function that is called when `fetchExecutable` does things. Intended
+to allow for communication with the user about what is going on, for
+example, when downloading a potentially large file over a potentially
+slow network connection.
+
+Note that this takes precedence over `messagerBuiltin`.
+
+Note that `FetchExecutableMessage` is exported and has the form:
+```typescript
+interface FetchExecutableMessage {
+    message: string;
+    kind: string;
+    target: string;
+    isVerbose: boolean;
+}
+```
+
+The `kind` string attribute will be one of:
+- `'executable_is_ok'`, when the pre-existing executable has been checked and is OK
+- `'fetching'`, when starting to fetch
+- `'saving'`, when starting to save
+- `'done'`, when saved and made executable
+
+### `messagerBuiltin`
+
+Required?: no
+
+Type: `string` (one of: `'string'`, `'json'`)
+
+Shortcuts for some simple builtin messagers.
+
+- `'string'`: just prints the `message` attribute
+- `'json'`: just prints the whole message as a JSON object
+
+If a string other than the above options is passed, is ignored.
+
+### `messagerBuiltinVerbose`
+
+Required?: no, by default verbose messages not included. Only relevant
+if `messagerBuiltin` is set.
+
+Type: `boolean`
+
+Whether the builtin messagers should include the messages that have
+`isVerbose: true`.
+
+### `messagerBuiltinStream`
+
+Required?: no, by default messages are printed to
+`process.stderr`. Only relevant if `messagerBuiltin` is set.
+
+Type: `stream.Writable`
+
+The stream to which messages from the builtin messager are written.
+
 ## String formatting
 
 As a convenience, for the string options noted above, can perform

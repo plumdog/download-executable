@@ -12,6 +12,15 @@ import axios from 'axios';
 
 type ExecIsOk = (filepath: string) => Promise<boolean>;
 
+export interface FetchExecutableMessage {
+    message: string;
+    kind: string;
+    target: string;
+    isVerbose: boolean;
+}
+
+export type FetchExecutableMessager = (message: FetchExecutableMessage) => void;
+
 export interface FetchExecutableOptions {
     target: string;
     url: string;
@@ -27,6 +36,10 @@ export interface FetchExecutableOptions {
     hashMethod?: string;
     hashValueUrl?: string;
     hashChecksumFileMatchFilepath?: string;
+    messager?: FetchExecutableMessager;
+    messagerBuiltin?: string;
+    messagerBuiltinVerbose?: boolean;
+    messagerBuiltinStream?: streamlib.Writable;
 }
 
 const hashFile = (filepath: string, hashType: string): Promise<string> => {
@@ -296,22 +309,72 @@ const optionsSave = async (options: FetchExecutableOptions, stream: NodeJS.Reada
     await saveFromStream(processedStream, dest);
 };
 
+const optionsMessager = (options: FetchExecutableOptions): FetchExecutableMessager => {
+    if (options.messager) {
+        return options.messager;
+    }
+
+    const messagerBuiltinStream: streamlib.Writable = options.messagerBuiltinStream ?? process.stderr;
+
+    if (options.messagerBuiltin === 'string') {
+        return (message: FetchExecutableMessage): void => {
+            if (!message.isVerbose || options.messagerBuiltinVerbose) {
+                messagerBuiltinStream.write(message.message + '\n');
+            }
+        };
+    } else if (options.messagerBuiltin === 'json') {
+        return (message: FetchExecutableMessage): void => {
+            if (!message.isVerbose || options.messagerBuiltinVerbose) {
+                messagerBuiltinStream.write(JSON.stringify(message) + '\n');
+            }
+        };
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    return (message: FetchExecutableMessage): void => {
+        // Null messager
+    };
+};
+
 export const fetchExecutable = async (options: FetchExecutableOptions): Promise<void> => {
+    const messager = optionsMessager(options);
     const execIsOkFn = optionsExecIsOk(options);
+
     const target = options.executableSubPathInDir ? pathlib.join(options.target, optionsFormat(options)(options.executableSubPathInDir)) : options.target;
     if (fs.existsSync(target)) {
         const isOk: boolean = await execIsOkFn(target);
         const symlinkIsOk: boolean = options.pathInTar && options.executableSubPathInDir && options.executableSubPathSymlink ? await execIsOkFn(options.executableSubPathSymlink) : true;
 
         if (isOk && symlinkIsOk) {
+            messager({
+                message: `Executable at ${target} is OK, nothing to do`,
+                kind: 'executable_is_ok',
+                target,
+                isVerbose: false,
+            });
             return Promise.resolve();
         }
     }
 
     const url = optionsUrl(options);
 
+    messager({
+        message: `Fetching from ${url}`,
+        kind: 'fetching',
+        target,
+        isVerbose: true,
+    });
+    const start = new Date();
+
     const response = await axios.get(url, {
         responseType: 'stream',
+    });
+
+    messager({
+        message: `Saving to ${target}`,
+        kind: 'saving',
+        target,
+        isVerbose: true,
     });
 
     await optionsSave(options, response.data, options.target);
@@ -321,4 +384,15 @@ export const fetchExecutable = async (options: FetchExecutableOptions): Promise<
     if (!newExecIsOk) {
         return Promise.reject(new Error(`Downloaded executable at ${target} failed check`));
     }
+
+    const end = new Date();
+
+    const fetchDuration = (end.getTime() - start.getTime()) / 1000;
+
+    messager({
+        message: `Fetched and saved to ${target} (${fetchDuration}s)`,
+        kind: 'done',
+        target,
+        isVerbose: false,
+    });
 };

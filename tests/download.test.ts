@@ -1,11 +1,11 @@
-import { fetchExecutable } from '..';
+import { fetchExecutable, FetchExecutableMessage } from '..';
 import * as tmp from 'tmp';
 import * as pathlib from 'path';
 import * as fs from 'fs';
 import * as zlib from 'zlib';
 import * as crypto from 'crypto';
 import { execSync } from 'child_process';
-import { Readable } from 'stream';
+import { Readable, Writable } from 'stream';
 import axios from 'axios';
 import MockAxiosAdapter from 'axios-mock-adapter';
 import * as tar from 'tar-stream';
@@ -51,6 +51,25 @@ const sha256String = (str: string): string => {
     sum.update(str);
     return sum.digest('hex');
 };
+
+class TestStream extends Writable {
+    readonly parts: Array<string>;
+
+    constructor() {
+        super();
+        this.parts = [];
+    }
+
+    _write(chunk: string | Buffer, encoding: string, callback: (err?: Error) => void) {
+        const asString = chunk instanceof Buffer ? chunk.toString() : chunk;
+        this.parts.push(asString);
+        callback();
+    }
+
+    toString(): string {
+        return this.parts.join('');
+    }
+}
 
 const sampleExecutableFileContent = ['#!/bin/bash', '', 'echo 1.2.3', ''].join('\n');
 const sampleExecutableFileContentSha256Hash = sha256String(sampleExecutableFileContent);
@@ -578,6 +597,125 @@ describe('fetch', () => {
         });
 
         expect(mockAxios.history.get).toEqual([]);
+
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
+    test('can fetch file with string messager', async () => {
+        const dir = tmp.dirSync();
+
+        mockAxios.onGet().reply(200, createBody(sampleExecutableFileContent));
+
+        const stream = new TestStream();
+
+        await fetchExecutable({
+            target: pathlib.join(dir.name, 'testexc'),
+            url: 'http://example.com/testexc_version_1.2.3',
+            execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
+            messagerBuiltin: 'string',
+            messagerBuiltinVerbose: true,
+            messagerBuiltinStream: stream,
+        });
+
+        const expected = [
+            'Fetching from http://example.com/testexc_version_1.2.3',
+            `Saving to ${dir.name}/testexc`,
+            expect.stringMatching(new RegExp(`^Fetched and saved to ${dir.name}/testexc \\(\\d+\\.?\\d*s\\)$`)),
+        ];
+
+        expect(stream.toString().trim().split('\n')).toMatchObject(expected);
+
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
+    test('can fetch file with json messager', async () => {
+        const dir = tmp.dirSync();
+
+        mockAxios.onGet().reply(200, createBody(sampleExecutableFileContent));
+
+        const stream = new TestStream();
+
+        await fetchExecutable({
+            target: pathlib.join(dir.name, 'testexc'),
+            url: 'http://example.com/testexc_version_1.2.3',
+            execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
+            messagerBuiltin: 'json',
+            messagerBuiltinVerbose: true,
+            messagerBuiltinStream: stream,
+        });
+
+        const expected = [
+            {
+                message: 'Fetching from http://example.com/testexc_version_1.2.3',
+                kind: 'fetching',
+                target: `${dir.name}/testexc`,
+                isVerbose: true,
+            },
+            {
+                message: `Saving to ${dir.name}/testexc`,
+                kind: 'saving',
+                target: `${dir.name}/testexc`,
+                isVerbose: true,
+            },
+            {
+                message: expect.stringMatching(new RegExp(`^Fetched and saved to ${dir.name}/testexc \\(\\d+\\.?\\d*s\\)$`)),
+                kind: 'done',
+                target: `${dir.name}/testexc`,
+                isVerbose: false,
+            },
+        ];
+
+        const parsed = stream
+            .toString()
+            .trim()
+            .split('\n')
+            .map((value: string) => JSON.parse(value));
+
+        expect(parsed).toMatchObject(expected);
+
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
+    test('can fetch file with custom messager', async () => {
+        const dir = tmp.dirSync();
+
+        mockAxios.onGet().reply(200, createBody(sampleExecutableFileContent));
+
+        const messages: Array<FetchExecutableMessage> = [];
+
+        const messager = (message: FetchExecutableMessage): void => {
+            messages.push(message);
+        };
+
+        await fetchExecutable({
+            target: pathlib.join(dir.name, 'testexc'),
+            url: 'http://example.com/testexc_version_1.2.3',
+            execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
+            messager,
+        });
+
+        const expected = [
+            {
+                message: 'Fetching from http://example.com/testexc_version_1.2.3',
+                kind: 'fetching',
+                target: `${dir.name}/testexc`,
+                isVerbose: true,
+            },
+            {
+                message: `Saving to ${dir.name}/testexc`,
+                kind: 'saving',
+                target: `${dir.name}/testexc`,
+                isVerbose: true,
+            },
+            {
+                message: expect.stringMatching(new RegExp(`^Fetched and saved to ${dir.name}/testexc \\(\\d+\\.?\\d*s\\)$`)),
+                kind: 'done',
+                target: `${dir.name}/testexc`,
+                isVerbose: false,
+            },
+        ];
+
+        expect(messages).toMatchObject(expected);
 
         fs.rmdirSync(dir.name, { recursive: true });
     });

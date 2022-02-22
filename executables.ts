@@ -197,3 +197,22 @@ export const jq = async (targetPath: string, version: string, options?: Partial<
         ...(options ?? {}),
     });
 };
+
+export const vagrant = async (targetPath: string, version: string, options?: Partial<FetchExecutableOptions>): Promise<void> => {
+    await fetchExecutable({
+        target: targetPath,
+        url: 'https://releases.hashicorp.com/vagrant/{version}/vagrant_{version}_{platform}_{arch!x64ToAmd64}.zip',
+        version,
+        versionExecArgs: ['--version'],
+        versionExecPostProcess: (execOutput: string): string => {
+            console.error(execOutput);
+            const prefix = 'Vagrant ';
+            if (!execOutput.startsWith(prefix)) {
+                throw new Error('Unexpected output from vagrant version');
+            }
+            return execOutput.substring(prefix.length).trim();
+        },
+        pathInZip: 'vagrant',
+        ...(options ?? {}),
+    });
+};

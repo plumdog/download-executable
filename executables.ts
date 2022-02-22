@@ -205,7 +205,6 @@ export const vagrant = async (targetPath: string, version: string, options?: Par
         version,
         versionExecArgs: ['--version'],
         versionExecPostProcess: (execOutput: string): string => {
-            console.error(execOutput);
             const prefix = 'Vagrant ';
             if (!execOutput.startsWith(prefix)) {
                 throw new Error('Unexpected output from vagrant version');

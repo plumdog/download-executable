@@ -161,3 +161,22 @@ export const usql = async (targetPath: string, version: string, options?: Partia
         ...(options ?? {}),
     });
 };
+
+export const terraform = async (targetPath: string, version: string, options?: Partial<FetchExecutableOptions>): Promise<void> => {
+    await fetchExecutable({
+        target: targetPath,
+        url: 'https://releases.hashicorp.com/terraform/{version}/terraform_{version}_{platform}_{arch!x64ToAmd64}.zip',
+        version,
+        versionExecArgs: ['version'],
+        versionExecPostProcess: (execOutput: string): string => {
+            const firstLine = execOutput.trim().split('\n')[0];
+            const prefix = 'Terraform v';
+            if (!firstLine.startsWith(prefix)) {
+                throw new Error('Unexpected output from terraform version');
+            }
+            return firstLine.substring(prefix.length).trim();
+        },
+        pathInZip: 'terraform',
+        ...(options ?? {}),
+    });
+};

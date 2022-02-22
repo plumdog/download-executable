@@ -216,3 +216,24 @@ export const vagrant = async (targetPath: string, version: string, options?: Par
         ...(options ?? {}),
     });
 };
+
+export const yq = async (targetPath: string, version: string, options?: Partial<FetchExecutableOptions>): Promise<void> => {
+    await fetchExecutable({
+        target: targetPath,
+        url: 'https://github.com/mikefarah/yq/releases/download/v{version}/yq_{platform}_{arch!x64ToAmd64}',
+        version,
+        versionExecArgs: ['--version'],
+        versionExecPostProcess: (execOutput: string): string => {
+            const prefix = 'yq ';
+            if (!execOutput.startsWith(prefix)) {
+                throw new Error('Unexpected output from yq version');
+            }
+            return execOutput
+                .substring(prefix.length)
+                .trim()
+                .replace(/.* version /, '')
+                .trim();
+        },
+        ...(options ?? {}),
+    });
+};

@@ -180,3 +180,20 @@ export const terraform = async (targetPath: string, version: string, options?: P
         ...(options ?? {}),
     });
 };
+
+export const jq = async (targetPath: string, version: string, options?: Partial<FetchExecutableOptions>): Promise<void> => {
+    await fetchExecutable({
+        target: targetPath,
+        url: 'https://github.com/stedolan/jq/releases/download/jq-{version}/jq-{platform}{arch!x64To64}',
+        version,
+        versionExecArgs: ['--version'],
+        versionExecPostProcess: (execOutput: string): string => {
+            const prefix = 'jq-';
+            if (!execOutput.startsWith(prefix)) {
+                throw new Error('Unexpected output from jq version');
+            }
+            return execOutput.substring(prefix.length).trim();
+        },
+        ...(options ?? {}),
+    });
+};

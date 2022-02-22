@@ -140,6 +140,12 @@ const fmt = format.create({
         }
         return str;
     },
+    x64To64: (str: string): string => {
+        if (str === 'x64') {
+            return '64';
+        }
+        return str;
+    },
 });
 
 const optionsFormat =

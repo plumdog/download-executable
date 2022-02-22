@@ -7,6 +7,7 @@ import * as tar from 'tar';
 import * as crypto from 'crypto';
 import * as pathlib from 'path';
 import bz2 from 'unbzip2-stream';
+import unzip from 'unzip-stream';
 import format from 'string-format';
 import axios from 'axios';
 
@@ -29,6 +30,7 @@ export interface FetchExecutableOptions {
     versionExecArgs?: Array<string>;
     versionExecPostProcess?: (execOutput: string) => string;
     pathInTar?: string;
+    pathInZip?: string;
     executableSubPathInDir?: string;
     executableSubPathSymlink?: string;
     gzExtract?: boolean;
@@ -211,6 +213,36 @@ const extractFromTar = (inStream: NodeJS.ReadableStream, pathInTar: string): Nod
     return outStream;
 };
 
+const extractFromZip = (inStream: NodeJS.ReadableStream, pathInZip: string): NodeJS.ReadableStream => {
+    const outStream = new streamlib.PassThrough();
+
+    let found = false;
+
+    const extract = new streamlib.Transform({
+        objectMode: true,
+        transform: (entry, e, callback): void => {
+            if (entry.path === pathInZip && entry.type == 'File') {
+                found = true;
+                entry.pipe(outStream);
+                entry.on('finish', callback);
+            } else {
+                entry.autodrain();
+                callback();
+            }
+        },
+    });
+
+    extract.on('finish', () => {
+        if (!found) {
+            throw new Error(`Failed to find ${pathInZip} in zip`);
+        }
+    });
+
+    inStream.pipe(unzip.Parse()).pipe(extract);
+
+    return outStream;
+};
+
 const extractDirectoryFromTarAndSave = (inStream: NodeJS.ReadableStream, dirPathInTar: string, dest: string): Promise<void> => {
     return new Promise((res, rej) => {
         // fs.rmSync added in 14.14.0, see https://nodejs.org/api/fs.html#fsrmsyncpath-options
@@ -303,6 +335,14 @@ const optionsSave = async (options: FetchExecutableOptions, stream: NodeJS.Reada
             return;
         } else {
             processedStream = extractFromTar(processedStream, optionsFormat(options)(options.pathInTar));
+        }
+    }
+
+    if (options.pathInZip) {
+        if (options.executableSubPathInDir) {
+            throw new Error('Use of executableSubPathInDir not yet supported with pathInZip');
+        } else {
+            processedStream = extractFromZip(processedStream, optionsFormat(options)(options.pathInZip));
         }
     }
 

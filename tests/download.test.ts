@@ -9,6 +9,7 @@ import { Readable, Writable } from 'stream';
 import axios from 'axios';
 import MockAxiosAdapter from 'axios-mock-adapter';
 import * as tar from 'tar-stream';
+import AdmZip from 'adm-zip';
 
 const mockAxios = new MockAxiosAdapter(axios, {
     onNoMatch: 'throwException',
@@ -148,6 +149,26 @@ describe('fetch', () => {
             url: 'http://example.com/testexc_version_1.2.3.tar',
             execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
             pathInTar: 'mydir/mysubdir/myfile.sh',
+        });
+
+        expect(fs.readFileSync(pathlib.join(dir.name, 'testexc'), 'utf8')).toEqual(sampleExecutableFileContent);
+
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
+    test('can fetch file from zip', async () => {
+        const zip = new AdmZip();
+        zip.addFile('mydir/mysubdir/myfile.sh', Buffer.from(sampleExecutableFileContent, 'utf8'));
+
+        const dir = tmp.dirSync();
+
+        mockAxios.onGet().reply(200, createBody(zip.toBuffer()));
+
+        await fetchExecutable({
+            target: pathlib.join(dir.name, 'testexc'),
+            url: 'http://example.com/testexc_version_1.2.3.zip',
+            execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
+            pathInZip: 'mydir/mysubdir/myfile.sh',
         });
 
         expect(fs.readFileSync(pathlib.join(dir.name, 'testexc'), 'utf8')).toEqual(sampleExecutableFileContent);

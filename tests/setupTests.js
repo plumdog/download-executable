@@ -44,3 +44,10 @@ jest.mock('unbzip2-stream', () => {
     }
     return jest.requireActual('unbzip2-stream');
 });
+
+jest.mock('unzip-stream', () => {
+    if (process.env.OLD_DEPENDENCIES) {
+        return jest.requireActual('unzip-stream-old');
+    }
+    return jest.requireActual('unzip-stream');
+});

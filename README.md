@@ -101,10 +101,20 @@ If set, treat the downloaded file as a `tar` archive, and extract the
 file at the given path. Can be used in conjunction with `gzExtract: true` to
 handle `.tar.gz` files.
 
+### `pathInZip`
+
+Required?: no, defaults to saving the downloaded file as-is
+
+Type: `string` (is [formatted](#string-formatting))
+
+If set, treat the downloaded file as a `zip` archive, and extract the
+file at the given path.
+
 ### `executableSubPathInDir`
 
 Required?: no, defaults to assuming the desired executable is a file
-at `pathInTar`. Only relevant if `pathInTar` is set.
+at `pathInTar`. Only relevant if `pathInTar` is set (not yet supported
+with `pathInZip`).
 
 Type: `string` (is [formatted](#string-formatting))
 

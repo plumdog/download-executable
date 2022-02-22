@@ -6,6 +6,10 @@ Fetch an executable, but only if needed
 ![npm](https://img.shields.io/npm/v/fetch-executable)
 ![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/plumdog/fetch-executable/Run%20linting%20and%20tests/main)
 
+Intended for use downloading exact versions of executables and storing
+them on a per-project basis, rather than relying on a globally stored
+version being good enough for everything.
+
 ## Quickstart
 
 ```
@@ -14,7 +18,7 @@ npm i --save fetch-executable
 
 Then:
 ```typescript
-import { fetchExecutable } from fetch-executable';
+import { fetchExecutable } from 'fetch-executable';
 
 await fetchExecutable({
     target: './my-exec',
@@ -27,10 +31,11 @@ await fetchExecutable({
 This will:
 - run `./my-exec --version` and check if the output is `1.2.3`
 - if so, then done
-- if not
+- if not (because the output was the wrong version, or it errored, or the file just wasn't there)
     - download the file from `https://example.com/download/my-exec/1.2.3`
     - save it to `./my-exec`
     - make it executable
+    - check it now passes the version check
 
 ## Options
 

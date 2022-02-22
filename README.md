@@ -2,6 +2,10 @@
 
 Fetch an executable, but only if needed
 
+[![GitHub license](https://img.shields.io/github/license/plumdog/fetch-executable)](https://github.com/plumdog/fetch-executable/blob/main/LICENSE)
+![npm](https://img.shields.io/npm/v/fetch-executable)
+![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/plumdog/fetch-executable/Run%20linting%20and%20tests/main)
+
 ## Quickstart
 
 ```

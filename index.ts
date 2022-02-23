@@ -78,6 +78,14 @@ const readFromChecksumFile = (response: string, matchFilepath: string): string =
     throw new Error(`Unable to find match for ${matchFilepath} in checksum file`);
 };
 
+interface HasCode {
+    code?: unknown;
+}
+
+const hasCode = (obj: unknown): obj is HasCode => {
+    return typeof obj === 'object' && !!obj && obj.hasOwnProperty('code');
+};
+
 const optionsExecIsOk = (options: FetchExecutableOptions): ExecIsOk => {
     const checks: Array<ExecIsOk> = [];
 
@@ -132,7 +140,11 @@ const optionsExecIsOk = (options: FetchExecutableOptions): ExecIsOk => {
 
 const fmt = format.create({
     capitalize: (str: string): string => {
-        return str[0].toUpperCase() + str.slice(1);
+        const firstChar = str[0];
+        if (typeof firstChar === 'undefined') {
+            return '';
+        }
+        return firstChar.toUpperCase() + str.slice(1);
     },
     x64ToAmd64: (str: string): string => {
         if (str === 'x64') {
@@ -170,8 +182,8 @@ const saveFromStream = (stream: NodeJS.ReadableStream, dest: string): Promise<vo
     return new Promise((res, rej) => {
         try {
             fs.unlinkSync(dest);
-        } catch (err) {
-            if (err.code === 'ENOENT') {
+        } catch (err: unknown) {
+            if (hasCode(err) && err.code === 'ENOENT') {
                 // That's fine
             } else {
                 throw err;
@@ -263,8 +275,8 @@ const extractDirectoryFromTarAndSave = (inStream: NodeJS.ReadableStream, dirPath
                 fs.rmdirSync(dest, {
                     recursive: true,
                 });
-            } catch (err) {
-                if (err.code === 'ENOENT') {
+            } catch (err: unknown) {
+                if (hasCode(err) && err.code === 'ENOENT') {
                     // Not there, that's fine
                 } else {
                     throw err;
@@ -329,8 +341,8 @@ const optionsSave = async (options: FetchExecutableOptions, stream: NodeJS.Reada
                 const symlinkTarget = pathlib.relative(pathlib.dirname(options.executableSubPathSymlink), pathlib.join(dest, options.executableSubPathInDir));
                 try {
                     fs.unlinkSync(options.executableSubPathSymlink);
-                } catch (err) {
-                    if (err.code === 'ENOENT') {
+                } catch (err: unknown) {
+                    if (hasCode(err) && err.code === 'ENOENT') {
                         // That's fine
                     } else {
                         throw err;

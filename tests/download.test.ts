@@ -105,7 +105,7 @@ describe('fetch', () => {
             execIsOk: async (filepath: string): Promise<boolean> => true,
         });
 
-        expect(mockAxios.history.get).toEqual([]);
+        expect(mockAxios.history['get']).toEqual([]);
 
         expect(fs.readFileSync(pathlib.join(dir.name, 'testexc'), 'utf8')).toEqual('anyfile');
 
@@ -285,7 +285,7 @@ describe('fetch', () => {
             executableSubPathInDir: 'main.sh',
         });
 
-        expect(mockAxios.history.get).toEqual([]);
+        expect(mockAxios.history['get']).toEqual([]);
         expect(execSync(pathlib.join(dir.name, 'testexc', 'main.sh'), { encoding: 'utf8' }).trim()).toEqual('1.2.3');
         fs.rmdirSync(dir.name, { recursive: true });
     });
@@ -320,7 +320,7 @@ describe('fetch', () => {
             executableSubPathInDir: 'main.sh',
         });
 
-        expect(mockAxios.history.get.length).toEqual(1);
+        expect((mockAxios.history['get'] ?? []).length).toEqual(1);
         expect(execSync(pathlib.join(dir.name, 'testexc', 'main.sh'), { encoding: 'utf8' }).trim()).toEqual('1.2.3');
         fs.rmdirSync(dir.name, { recursive: true });
     });
@@ -347,7 +347,7 @@ describe('fetch', () => {
             executableSubPathSymlink: pathlib.join(dir.name, 'testexc.sh'),
         });
 
-        expect(mockAxios.history.get).toEqual([]);
+        expect(mockAxios.history['get']).toEqual([]);
         expect(execSync(pathlib.join(dir.name, 'testexc_dir', 'main.sh'), { encoding: 'utf8' }).trim()).toEqual('1.2.3');
         expect(execSync(pathlib.join(dir.name, 'testexc.sh'), { encoding: 'utf8' }).trim()).toEqual('1.2.3');
         fs.rmdirSync(dir.name, { recursive: true });
@@ -396,7 +396,7 @@ describe('fetch', () => {
             executableSubPathSymlink: pathlib.join(dir.name, 'testexc.sh'),
         });
 
-        expect(mockAxios.history.get.length).toEqual(1);
+        expect((mockAxios.history['get'] ?? []).length).toEqual(1);
         expect(execSync(pathlib.join(dir.name, 'testexc_dir', 'main.sh'), { encoding: 'utf8' }).trim()).toEqual('1.2.3');
         // Symlink now exists and works
         expect(execSync(pathlib.join(dir.name, 'testexc.sh'), { encoding: 'utf8' }).trim()).toEqual('1.2.3');
@@ -493,7 +493,7 @@ describe('fetch', () => {
             hashValueUrl: 'http://example.com/testexc_version_{version}_sha256',
         });
 
-        // expect(mockAxios.history.get).toEqual([]);
+        // expect(mockAxios.history['get']).toEqual([]);
 
         expect(fs.readFileSync(pathlib.join(dir.name, 'testexc'), 'utf8')).toEqual(sampleExecutableFileContent);
 
@@ -550,7 +550,13 @@ describe('fetch', () => {
         expect(fs.readFileSync(pathlib.join(dir.name, 'testexc'), 'utf8')).toEqual(sampleExecutableFileContent);
         expect(execSync(pathlib.join(dir.name, 'testexc'), { encoding: 'utf8' }).trim()).toEqual('1.2.3');
 
-        expect(mockAxios.history.get[0].url).toEqual('http://example.com/testexc_version_1.2.3');
+        const getArgs = (mockAxios.history['get'] ?? [])[0];
+
+        if (typeof getArgs === 'undefined') {
+            throw new Error('Should not be undefined');
+        }
+
+        expect(getArgs.url).toEqual('http://example.com/testexc_version_1.2.3');
 
         fs.rmdirSync(dir.name, { recursive: true });
     });
@@ -568,7 +574,7 @@ describe('fetch', () => {
             url: 'http://example.com/testexc_version_{version}',
         });
 
-        expect(mockAxios.history.get).toEqual([]);
+        expect(mockAxios.history['get']).toEqual([]);
 
         expect(fs.readFileSync(pathlib.join(dir.name, 'testexc'), 'utf8')).toEqual(sampleExecutableFileContent);
 
@@ -594,7 +600,13 @@ describe('fetch', () => {
         expect(fs.readFileSync(pathlib.join(dir.name, 'testexc'), 'utf8')).toEqual(sampleExecutableFileContent);
         expect(execSync(pathlib.join(dir.name, 'testexc'), { encoding: 'utf8' }).trim()).toEqual('1.2.3');
 
-        expect(mockAxios.history.get[0].url).toEqual('http://example.com/testexc_version_1.2.3');
+        const getArgs = (mockAxios.history['get'] ?? [])[0];
+
+        if (typeof getArgs === 'undefined') {
+            throw new Error('Should not be undefined');
+        }
+
+        expect(getArgs.url).toEqual('http://example.com/testexc_version_1.2.3');
 
         fs.rmdirSync(dir.name, { recursive: true });
     });
@@ -617,7 +629,7 @@ describe('fetch', () => {
             },
         });
 
-        expect(mockAxios.history.get).toEqual([]);
+        expect(mockAxios.history['get']).toEqual([]);
 
         fs.rmdirSync(dir.name, { recursive: true });
     });

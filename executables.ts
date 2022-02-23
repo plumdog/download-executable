@@ -26,7 +26,7 @@ export const sops = async (targetPath: string, version: string, options?: Partia
         version,
         versionExecArgs: ['--version'],
         versionExecPostProcess: (execOutput: string): string => {
-            const firstLine = execOutput.trim().split('\n')[0];
+            const firstLine = execOutput.trim().split('\n')[0] ?? '';
             const prefix = 'sops ';
             if (!firstLine.startsWith(prefix)) {
                 throw new Error('Unexpected output from sops version');
@@ -132,7 +132,7 @@ export const mysqlsh = async (targetPath: string, version: string, options?: Par
         versionExecPostProcess: (execOutput: string): string => {
             const matches = execOutput.match(/\d+\.\d+\.\d+/);
             if (matches) {
-                return matches[0];
+                return matches[0] ?? '';
             }
             throw new Error('Unexpect output from mysqlsh --version');
         },
@@ -169,7 +169,7 @@ export const terraform = async (targetPath: string, version: string, options?: P
         version,
         versionExecArgs: ['version'],
         versionExecPostProcess: (execOutput: string): string => {
-            const firstLine = execOutput.trim().split('\n')[0];
+            const firstLine = execOutput.trim().split('\n')[0] ?? '';
             const prefix = 'Terraform v';
             if (!firstLine.startsWith(prefix)) {
                 throw new Error('Unexpected output from terraform version');

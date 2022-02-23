@@ -1,25 +1,12 @@
 {
   "compilerOptions": {
-    "target": "ES2018",
-    "module": "commonjs",
-    "lib": ["es6"],
-    "skipLibCheck": true,
-    "declaration": true,
-    "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "noImplicitThis": true,
-    "alwaysStrict": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": false,
-    "inlineSourceMap": true,
-    "inlineSources": true,
-    "experimentalDecorators": true,
-    "strictPropertyInitialization": false,
+    "target": "ES2019",
     "typeRoots": ["./node_modules/@types"],
-    "esModuleInterop": true
+    "checkJs": false,
+    "noUnusedParameters": false,
+    "noImplicitOverride": false,
+    "moduleResolution": "node"
   },
-  "exclude": ["build/**/*"]
+  "exclude": ["build/**/*", "coverage/**/*"],
+  "extends": "@tsconfig/node16-strictest-esm/tsconfig.json"
 }

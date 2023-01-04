@@ -86,6 +86,15 @@ Type: `Array<string>`
 Command line arguments to pass to the local executable to make it
 print its version.
 
+### `versionExecCaptureStderr`
+
+Required?: no, defaults capturing stdout
+
+Type: `boolean`
+
+If set to `true`, capture stderr from the executed command. Otherwise,
+captures stdout.
+
 ### `versionExecPostProcess`
 
 Required?: no, defaults to no post processing. Only relevant if `version` is set.

@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { execSync } from 'child_process';
+import { spawnSync } from 'child_process';
 import * as streamlib from 'stream';
 import * as zlib from 'zlib';
 import * as tarStream from 'tar-stream';
@@ -28,6 +28,7 @@ export interface FetchExecutableOptions {
     execIsOk?: ExecIsOk;
     version?: string;
     versionExecArgs?: Array<string>;
+    versionExecCaptureStderr?: boolean;
     versionExecPostProcess?: (execOutput: string) => string;
     pathInTar?: string;
     pathInZip?: string;
@@ -97,8 +98,14 @@ const optionsExecIsOk = (options: FetchExecutableOptions): ExecIsOk => {
         checks.push(async (filepath: string): Promise<boolean> => {
             let out: string;
             try {
-                out = execSync([filepath, ...(options.versionExecArgs ?? [])].join(' '), { encoding: 'utf8' }).trim();
+                const result = spawnSync(filepath, options.versionExecArgs ?? [], { encoding: 'utf8' });
+                if (options.versionExecCaptureStderr) {
+                    out = result.stderr.trim();
+                } else {
+                    out = result.stdout.trim();
+                }
             } catch (err) {
+                console.error(err);
                 return false;
             }
             const processed = options.versionExecPostProcess ? options.versionExecPostProcess(out) : out;

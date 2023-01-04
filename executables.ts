@@ -236,3 +236,23 @@ export const yq = async (targetPath: string, version: string, options?: Partial<
         ...(options ?? {}),
     });
 };
+
+export const kubent = async (targetPath: string, version: string, options?: Partial<FetchExecutableOptions>): Promise<void> => {
+    await fetchExecutable({
+        target: targetPath,
+        url: 'https://github.com/doitintl/kube-no-trouble/releases/download/{version}/kubent-{version}-{platform}-{arch!x64ToAmd64}.tar.gz',
+        version,
+        versionExecArgs: ['--version'],
+        versionExecCaptureStderr: true,
+        versionExecPostProcess: (execOutput: string): string => {
+            const matches = execOutput.match(/\d+\.\d+\.\d+/);
+            if (matches) {
+                return matches[0] ?? '';
+            }
+            throw new Error('Unexpect output from kubent --version');
+        },
+        pathInTar: 'kubent',
+        gzExtract: true,
+        ...(options ?? {}),
+    });
+};

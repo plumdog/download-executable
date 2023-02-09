@@ -7,11 +7,20 @@ export const kubectl = async (targetPath: string, version: string, options?: Par
         version,
         versionExecArgs: ['version', '--client=true', '--short'],
         versionExecPostProcess: (execOutput: string): string => {
+            const lines = execOutput.split('\n');
             const prefix = 'Client Version: v';
-            if (!execOutput.startsWith(prefix)) {
-                throw new Error('Unexpected output from kubectl version');
+            const clientVersionLines = lines.filter((line: string) => line.startsWith(prefix));
+            const clientVersionLine = clientVersionLines[0];
+
+            if (!clientVersionLine) {
+                throw new Error(`Unexpected output from kubectl version, no lines started with prefix: ${prefix}`);
             }
-            return execOutput.substring(prefix.length).trim();
+
+            if (clientVersionLines.length > 1) {
+                throw new Error(`Unexpected output from kubectl version, multiple lines started with prefix: ${prefix}`);
+            }
+
+            return clientVersionLine.substring(prefix.length).trim();
         },
         hashMethod: 'sha256',
         hashValueUrl: 'https://dl.k8s.io/v{version}/bin/{platform}/{arch!x64ToAmd64}/kubectl.sha256',

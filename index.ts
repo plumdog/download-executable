@@ -108,7 +108,14 @@ const optionsExecIsOk = (options: FetchExecutableOptions): ExecIsOk => {
                 console.error(err);
                 return false;
             }
-            const processed = options.versionExecPostProcess ? options.versionExecPostProcess(out) : out;
+
+            let processed: string;
+            try {
+                processed = options.versionExecPostProcess ? options.versionExecPostProcess(out) : out;
+            } catch (err) {
+                console.error(err);
+                return false;
+            }
             return processed === options.version;
         });
     }

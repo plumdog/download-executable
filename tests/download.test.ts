@@ -634,6 +634,41 @@ describe('fetch', () => {
         fs.rmdirSync(dir.name, { recursive: true });
     });
 
+    test('does fetch file if post-process fails', async () => {
+        const dir = tmp.dirSync();
+
+        const goodPrefixContent = ['#!/bin/bash', '', 'echo prefix 1.2.3 suffix', ''].join('\n');
+        const badPrefixContent = ['#!/bin/bash', '', 'echo badprefix 1.2.3 suffix', ''].join('\n');
+
+        mockAxios.onGet().reply(200, createBody(goodPrefixContent));
+
+        const target = pathlib.join(dir.name, 'testexc');
+        fs.writeFileSync(target, badPrefixContent);
+        fs.chmodSync(target, 0o755);
+
+        await fetchExecutable({
+            target: pathlib.join(dir.name, 'testexc'),
+            version: '1.2.3',
+            url: 'http://example.com/testexc_version_{version}',
+            versionExecPostProcess: (output: string): string => {
+                if (output.startsWith('badprefix')) {
+                    throw new Error('Unexpected prefix badprefix');
+                }
+                return output.replace(/^prefix\ /, '').replace(/\ suffix$/, '');
+            },
+        });
+
+        const getArgs = (mockAxios.history['get'] ?? [])[0];
+
+        if (typeof getArgs === 'undefined') {
+            throw new Error('Should not be undefined');
+        }
+
+        expect(getArgs.url).toEqual('http://example.com/testexc_version_1.2.3');
+
+        fs.rmdirSync(dir.name, { recursive: true });
+    });
+
     test('can fetch file with string messager', async () => {
         const dir = tmp.dirSync();
 

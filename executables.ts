@@ -265,3 +265,22 @@ export const kubent = async (targetPath: string, version: string, options?: Part
         ...(options ?? {}),
     });
 };
+
+export const flux = async (targetPath: string, version: string, options?: Partial<FetchExecutableOptions>): Promise<void> => {
+    await fetchExecutable({
+        target: targetPath,
+        url: 'https://github.com/fluxcd/flux2/releases/download/v{version}/flux_{version}_{platform}_{arch!x64ToAmd64}.tar.gz',
+        version,
+        gzExtract: true,
+        pathInTar: 'flux',
+        versionExecArgs: ['--version'],
+        versionExecPostProcess: (execOutput: string): string => {
+            const prefix = 'flux version ';
+            if (!execOutput.startsWith(prefix)) {
+                throw new Error('Unexpected output from flux --version');
+            }
+            return execOutput.substring(prefix.length).trim();
+        },
+        ...(options ?? {}),
+    });
+};

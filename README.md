@@ -37,7 +37,42 @@ This will:
     - make it executable
     - check it now passes the version check
 
+## Shortcuts
+
+There is a selection of executables for which the steps to download and check the version are bundled. These can be installed with eg:
+
+```typescript
+import { kubectl } from 'fetch-executable/executables';
+
+await kubectl('./kubectl', '1.23.0');
+```
+
+The full set is as follows, where the name of the function to download
+matches the name of the tool. Note also that these functions take an
+optional third argument that allow overriding of any options in the
+full set of options (see below).
+
+- `kubectl`
+- `sops`
+- `helmfile`
+- `helm`
+- `eksctl`
+- `minikube`
+- `gomplate`
+- `mysqlsh`
+- `usql`
+- `terraform`
+- `jq`
+- `vagrant`
+- `yq`
+- `kubent`
+- `flux`
+
 ## Options
+
+This is the full set of options that can be passed to
+`fetchExecutable` (or as the optional third argument to any of the
+shortcuts, but with no required options).
 
 ### `target`
 

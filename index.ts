@@ -20,7 +20,11 @@ export interface FetchExecutableMessage {
     isVerbose: boolean;
 }
 
-export type FetchExecutableMessager = (message: FetchExecutableMessage) => void;
+export type FetchExecutableMessageHandler = (message: FetchExecutableMessage) => void;
+/**
+ * @deprecated use FetchExecutableMessageHandler instead
+ */
+export type FetchExecutableMessager = FetchExecutableMessageHandler;
 
 export interface FetchExecutableOptions {
     target: string;
@@ -39,9 +43,25 @@ export interface FetchExecutableOptions {
     hashMethod?: string;
     hashValueUrl?: string;
     hashChecksumFileMatchFilepath?: string;
+    messageHandler?: FetchExecutableMessageHandler;
+    messageHandlerBuiltin?: string;
+    messageHandlerBuiltinVerbose?: boolean;
+    messageHandlerBuiltinStream?: streamlib.Writable;
+    /**
+     * @deprecated use messageHandler instead
+     */
     messager?: FetchExecutableMessager;
+    /**
+     * @deprecated use messageHandlerBuiltin instead
+     */
     messagerBuiltin?: string;
+    /**
+     * @deprecated use messageHandlerBuiltinVerbose instead
+     */
     messagerBuiltinVerbose?: boolean;
+    /**
+     * @deprecated use messageHandlerBuiltinStream instead
+     */
     messagerBuiltinStream?: streamlib.Writable;
 }
 
@@ -381,35 +401,66 @@ const optionsSave = async (options: FetchExecutableOptions, stream: NodeJS.Reada
     await saveFromStream(processedStream, dest);
 };
 
-const optionsMessager = (options: FetchExecutableOptions): FetchExecutableMessager => {
+const optionsMessageHandler = (options: FetchExecutableOptions): FetchExecutableMessageHandler => {
     if (options.messager) {
+        console.warn(`fetch-executable: Use of 'messager' property is deprecated. Use alias 'messageHandler' instead.`);
         return options.messager;
     }
+    if (options.messageHandler) {
+        return options.messageHandler;
+    }
 
-    const messagerBuiltinStream: streamlib.Writable = options.messagerBuiltinStream ?? process.stderr;
+    let messageHandlerBuiltinStream: streamlib.Writable = process.stderr;
 
-    if (options.messagerBuiltin === 'string') {
+    if (options.messagerBuiltinStream) {
+        console.warn(`fetch-executable: Use of 'messagerBuiltinStream' property is deprecated. Use alias 'messageHandlerBuiltinStream' instead.`);
+        messageHandlerBuiltinStream = options.messagerBuiltinStream;
+    }
+    if (options.messageHandlerBuiltinStream) {
+        messageHandlerBuiltinStream = options.messageHandlerBuiltinStream;
+    }
+
+    let messageHandlerBuiltin: string | undefined = undefined;
+
+    if (options.messagerBuiltin) {
+        console.warn(`fetch-executable: Use of 'messagerBuiltin' property is deprecated. Use alias 'messageHandlerBuiltin' instead.`);
+        messageHandlerBuiltin = options.messagerBuiltin;
+    }
+    if (options.messageHandlerBuiltin) {
+        messageHandlerBuiltin = options.messageHandlerBuiltin;
+    }
+
+    let messageHandlerBuiltinVerbose = false;
+    if (options.messagerBuiltinVerbose) {
+        console.warn(`fetch-executable: Use of 'messagerBuiltinVerbose' property is deprecated. Use alias 'messageHandlerBuiltinVerbose' instead.`);
+        messageHandlerBuiltinVerbose = options.messagerBuiltinVerbose;
+    }
+    if (options.messageHandlerBuiltinVerbose) {
+        messageHandlerBuiltinVerbose = options.messageHandlerBuiltinVerbose;
+    }
+
+    if (messageHandlerBuiltin === 'string') {
         return (message: FetchExecutableMessage): void => {
-            if (!message.isVerbose || options.messagerBuiltinVerbose) {
-                messagerBuiltinStream.write(message.message + '\n');
+            if (!message.isVerbose || messageHandlerBuiltinVerbose) {
+                messageHandlerBuiltinStream.write(message.message + '\n');
             }
         };
-    } else if (options.messagerBuiltin === 'json') {
+    } else if (messageHandlerBuiltin === 'json') {
         return (message: FetchExecutableMessage): void => {
-            if (!message.isVerbose || options.messagerBuiltinVerbose) {
-                messagerBuiltinStream.write(JSON.stringify(message) + '\n');
+            if (!message.isVerbose || messageHandlerBuiltinVerbose) {
+                messageHandlerBuiltinStream.write(JSON.stringify(message) + '\n');
             }
         };
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     return (message: FetchExecutableMessage): void => {
-        // Null messager
+        // Null message handler
     };
 };
 
 export const fetchExecutable = async (options: FetchExecutableOptions): Promise<void> => {
-    const messager = optionsMessager(options);
+    const messageHandler = optionsMessageHandler(options);
     const execIsOkFn = optionsExecIsOk(options);
 
     const target = options.executableSubPathInDir ? pathlib.join(options.target, optionsFormat(options)(options.executableSubPathInDir)) : options.target;
@@ -418,7 +469,7 @@ export const fetchExecutable = async (options: FetchExecutableOptions): Promise<
         const symlinkIsOk: boolean = options.pathInTar && options.executableSubPathInDir && options.executableSubPathSymlink ? await execIsOkFn(options.executableSubPathSymlink) : true;
 
         if (isOk && symlinkIsOk) {
-            messager({
+            messageHandler({
                 message: `Executable at ${target} is OK, nothing to do`,
                 kind: 'executable_is_ok',
                 target,
@@ -430,7 +481,7 @@ export const fetchExecutable = async (options: FetchExecutableOptions): Promise<
 
     const url = optionsUrl(options);
 
-    messager({
+    messageHandler({
         message: `Fetching from ${url}`,
         kind: 'fetching',
         target,
@@ -442,7 +493,7 @@ export const fetchExecutable = async (options: FetchExecutableOptions): Promise<
         responseType: 'stream',
     });
 
-    messager({
+    messageHandler({
         message: `Saving to ${target}`,
         kind: 'saving',
         target,
@@ -460,7 +511,7 @@ export const fetchExecutable = async (options: FetchExecutableOptions): Promise<
             bytesDownloaded += chunk.length;
             const percentage = Math.round((100 * bytesDownloaded) / contentLength);
             if (percentage > lastPercentageReported + 5) {
-                messager({
+                messageHandler({
                     message: `Downloading from ${url} (${percentage}%)`,
                     kind: 'fetch_progress',
                     target,
@@ -483,7 +534,7 @@ export const fetchExecutable = async (options: FetchExecutableOptions): Promise<
 
     const fetchDuration = (end.getTime() - start.getTime()) / 1000;
 
-    messager({
+    messageHandler({
         message: `Fetched and saved to ${target} (${fetchDuration}s)`,
         kind: 'done',
         target,

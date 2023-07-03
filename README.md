@@ -235,7 +235,7 @@ rather a list of hashes as returned by a utility like `sha256sum`,
 that lists hashes and filenames, use this to identify the filename
 whose hash to use.
 
-### `messager`
+### `messageHandler`
 
 Required?: no
 
@@ -246,7 +246,7 @@ to allow for communication with the user about what is going on, for
 example, when downloading a potentially large file over a potentially
 slow network connection.
 
-Note that this takes precedence over `messagerBuiltin`.
+Note that this takes precedence over `messageHandlerBuiltin`.
 
 Note that `FetchExecutableMessage` is exported and has the form:
 ```typescript
@@ -265,37 +265,53 @@ The `kind` string attribute will be one of:
 - `'saving'`, when starting to save
 - `'done'`, when saved and made executable
 
-### `messagerBuiltin`
+### `messager`
+
+Deprecated alias for `messageHandler`.
+
+### `messageHandlerBuiltin`
 
 Required?: no
 
 Type: `string` (one of: `'string'`, `'json'`)
 
-Shortcuts for some simple builtin messagers.
+Shortcuts for some simple builtin messageHandlers.
 
 - `'string'`: just prints the `message` attribute
 - `'json'`: just prints the whole message as a JSON object
 
 If a string other than the above options is passed, is ignored.
 
-### `messagerBuiltinVerbose`
+### `messagerBuiltin`
+
+Deprecated alias for `messageHandlerBuiltin`.
+
+### `messageHandlerBuiltinVerbose`
 
 Required?: no, by default verbose messages not included. Only relevant
-if `messagerBuiltin` is set.
+if `messageHandlerBuiltin` is set.
 
 Type: `boolean`
 
-Whether the builtin messagers should include the messages that have
+Whether the builtin messageHandlers should include the messages that have
 `isVerbose: true`.
 
-### `messagerBuiltinStream`
+### `messagerBuiltinVerbose`
+
+Deprecated alias for `messageHandlerBuiltinVerbose`.
+
+### `messageHandlerBuiltinStream`
 
 Required?: no, by default messages are printed to
-`process.stderr`. Only relevant if `messagerBuiltin` is set.
+`process.stderr`. Only relevant if `messageHandlerBuiltin` is set.
 
 Type: `stream.Writable`
 
-The stream to which messages from the builtin messager are written.
+The stream to which messages from the builtin messageHandler are written.
+
+### `messagerBuiltinStream`
+
+Deprecated alias for `messageHandlerBuiltinStream`.
 
 ## String formatting
 

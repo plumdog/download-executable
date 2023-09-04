@@ -669,7 +669,7 @@ describe('fetch', () => {
         fs.rmdirSync(dir.name, { recursive: true });
     });
 
-    test('can fetch file with string messager', async () => {
+    test('can fetch file with string messageHandler', async () => {
         const dir = tmp.dirSync();
 
         mockAxios.onGet().reply(200, createBody(sampleExecutableFileContent));
@@ -680,9 +680,9 @@ describe('fetch', () => {
             target: pathlib.join(dir.name, 'testexc'),
             url: 'http://example.com/testexc_version_1.2.3',
             execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
-            messagerBuiltin: 'string',
-            messagerBuiltinVerbose: true,
-            messagerBuiltinStream: stream,
+            messageHandlerBuiltin: 'string',
+            messageHandlerBuiltinVerbose: true,
+            messageHandlerBuiltinStream: stream,
         });
 
         const expected = [
@@ -723,7 +723,7 @@ describe('fetch', () => {
         fs.rmdirSync(dir.name, { recursive: true });
     });
 
-    test('can fetch file with json messager', async () => {
+    test('can fetch file with json messageHandler', async () => {
         const dir = tmp.dirSync();
 
         mockAxios.onGet().reply(200, createBody(sampleExecutableFileContent));
@@ -734,9 +734,9 @@ describe('fetch', () => {
             target: pathlib.join(dir.name, 'testexc'),
             url: 'http://example.com/testexc_version_1.2.3',
             execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
-            messagerBuiltin: 'json',
-            messagerBuiltinVerbose: true,
-            messagerBuiltinStream: stream,
+            messageHandlerBuiltin: 'json',
+            messageHandlerBuiltinVerbose: true,
+            messageHandlerBuiltinStream: stream,
         });
 
         const expected = [
@@ -771,14 +771,14 @@ describe('fetch', () => {
         fs.rmdirSync(dir.name, { recursive: true });
     });
 
-    test('can fetch file with custom messager', async () => {
+    test('can fetch file with custom messageHandler', async () => {
         const dir = tmp.dirSync();
 
         mockAxios.onGet().reply(200, createBody(sampleExecutableFileContent));
 
         const messages: Array<FetchExecutableMessage> = [];
 
-        const messager = (message: FetchExecutableMessage): void => {
+        const messageHandler = (message: FetchExecutableMessage): void => {
             messages.push(message);
         };
 
@@ -786,7 +786,7 @@ describe('fetch', () => {
             target: pathlib.join(dir.name, 'testexc'),
             url: 'http://example.com/testexc_version_1.2.3',
             execIsOk: async (filepath: string): Promise<boolean> => fs.existsSync(filepath),
-            messager,
+            messageHandler,
         });
 
         const expected = [

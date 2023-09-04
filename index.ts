@@ -21,10 +21,6 @@ export interface FetchExecutableMessage {
 }
 
 export type FetchExecutableMessageHandler = (message: FetchExecutableMessage) => void;
-/**
- * @deprecated use FetchExecutableMessageHandler instead
- */
-export type FetchExecutableMessager = FetchExecutableMessageHandler;
 
 export interface FetchExecutableOptions {
     target: string;
@@ -47,22 +43,6 @@ export interface FetchExecutableOptions {
     messageHandlerBuiltin?: string;
     messageHandlerBuiltinVerbose?: boolean;
     messageHandlerBuiltinStream?: streamlib.Writable;
-    /**
-     * @deprecated use messageHandler instead
-     */
-    messager?: FetchExecutableMessager;
-    /**
-     * @deprecated use messageHandlerBuiltin instead
-     */
-    messagerBuiltin?: string;
-    /**
-     * @deprecated use messageHandlerBuiltinVerbose instead
-     */
-    messagerBuiltinVerbose?: boolean;
-    /**
-     * @deprecated use messageHandlerBuiltinStream instead
-     */
-    messagerBuiltinStream?: streamlib.Writable;
 }
 
 const hashFile = (filepath: string, hashType: string): Promise<string> => {
@@ -402,39 +382,23 @@ const optionsSave = async (options: FetchExecutableOptions, stream: NodeJS.Reada
 };
 
 const optionsMessageHandler = (options: FetchExecutableOptions): FetchExecutableMessageHandler => {
-    if (options.messager) {
-        console.warn(`fetch-executable: Use of 'messager' property is deprecated. Use alias 'messageHandler' instead.`);
-        return options.messager;
-    }
     if (options.messageHandler) {
         return options.messageHandler;
     }
 
     let messageHandlerBuiltinStream: streamlib.Writable = process.stderr;
 
-    if (options.messagerBuiltinStream) {
-        console.warn(`fetch-executable: Use of 'messagerBuiltinStream' property is deprecated. Use alias 'messageHandlerBuiltinStream' instead.`);
-        messageHandlerBuiltinStream = options.messagerBuiltinStream;
-    }
     if (options.messageHandlerBuiltinStream) {
         messageHandlerBuiltinStream = options.messageHandlerBuiltinStream;
     }
 
     let messageHandlerBuiltin: string | undefined = undefined;
 
-    if (options.messagerBuiltin) {
-        console.warn(`fetch-executable: Use of 'messagerBuiltin' property is deprecated. Use alias 'messageHandlerBuiltin' instead.`);
-        messageHandlerBuiltin = options.messagerBuiltin;
-    }
     if (options.messageHandlerBuiltin) {
         messageHandlerBuiltin = options.messageHandlerBuiltin;
     }
 
     let messageHandlerBuiltinVerbose = false;
-    if (options.messagerBuiltinVerbose) {
-        console.warn(`fetch-executable: Use of 'messagerBuiltinVerbose' property is deprecated. Use alias 'messageHandlerBuiltinVerbose' instead.`);
-        messageHandlerBuiltinVerbose = options.messagerBuiltinVerbose;
-    }
     if (options.messageHandlerBuiltinVerbose) {
         messageHandlerBuiltinVerbose = options.messageHandlerBuiltinVerbose;
     }

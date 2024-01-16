@@ -1,11 +1,12 @@
 import { fetchExecutable, FetchExecutableOptions } from '.';
+import { compareVersions } from 'compare-versions';
 
 export const kubectl = async (targetPath: string, version: string, options?: Partial<FetchExecutableOptions>): Promise<void> => {
     await fetchExecutable({
         target: targetPath,
         url: 'https://dl.k8s.io/release/v{version}/bin/{platform}/{arch!x64ToAmd64}/kubectl',
         version,
-        versionExecArgs: ['version', '--client=true', '--short'],
+        versionExecArgs: ['version', '--client=true', ...(compareVersions(version, '1.28.0') >= 0 ? [] : ['--short=true'])],
         versionExecPostProcess: (execOutput: string): string => {
             const lines = execOutput.split('\n');
             const prefix = 'Client Version: v';

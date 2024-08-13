@@ -32,7 +32,7 @@ export const kubectl = async (targetPath: string, version: string, options?: Par
 export const sops = async (targetPath: string, version: string, options?: Partial<FetchExecutableOptions>): Promise<void> => {
     await fetchExecutable({
         target: targetPath,
-        url: 'https://github.com/mozilla/sops/releases/download/v{version}/sops-v{version}.{platform}',
+        url: 'https://github.com/mozilla/sops/releases/download/v{version}/sops-v{version}.{platform}' + (compareVersions(version, '3.8.0') >= 0 ? '.{arch!x64ToAmd64}' : ''),
         version,
         versionExecArgs: ['--version'],
         versionExecPostProcess: (execOutput: string): string => {

@@ -285,3 +285,28 @@ export const flux = async (targetPath: string, version: string, options?: Partia
         ...(options ?? {}),
     });
 };
+
+export const gh = async (targetPath: string, version: string, options?: Partial<FetchExecutableOptions>): Promise<void> => {
+    await fetchExecutable({
+        target: targetPath,
+        url: 'https://github.com/cli/cli/releases/download/v{version}/gh_{version}_{platform}_{arch!x64ToAmd64}.tar.gz',
+        version,
+        gzExtract: true,
+        pathInTar: 'gh_{version}_{platform}_{arch!x64ToAmd64}/bin/gh',
+        versionExecArgs: ['version'],
+        versionExecPostProcess: (execOutput: string): string => {
+            // Sample output:
+            // gh version 2.54.0 (2024-08-01)
+            // https://github.com/cli/cli/releases/tag/v2.54.0
+
+            // Should return 2.54.0
+            const firstLine = execOutput.trim().split('\n')[0] ?? '';
+            const prefix = 'gh version ';
+            if (!firstLine.startsWith(prefix)) {
+                throw new Error('Unexpected output from gh version');
+            }
+            return firstLine.substring(prefix.length).trim().replace(/ .*/, '');
+        },
+        ...(options ?? {}),
+    });
+};

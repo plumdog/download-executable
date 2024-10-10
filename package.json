@@ -1,6 +1,6 @@
 {
   "name": "fetch-executable",
-  "version": "0.17.0",
+  "version": "0.17.1",
   "description": "Fetch an executable, but only if needed",
   "homepage": "https://github.com/plumdog/fetch-executable",
   "repository": {

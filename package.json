@@ -2,6 +2,11 @@
   "name": "fetch-executable",
   "version": "0.17.0",
   "description": "Fetch an executable, but only if needed",
+  "homepage": "https://github.com/plumdog/fetch-executable",
+  "repository": {
+    "type": "git",
+    "url": "github:plumdog/fetch-executable"
+  },
   "scripts": {
     "build": "rm -rf build/ && npm run -- tsc --project ./tsconfig.dist.json --noEmitOnError --outDir ./build && cp package.json package-lock.json README.md ./build/ && (cd ./build && npm ci --only=production)",
     "compile": "npm run tsc --noEmitOnError",
